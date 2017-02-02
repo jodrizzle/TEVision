@@ -109,5 +109,5 @@ extra-deps:
 - vector-binary-instances-0.2.3.4
 - vector-th-unbox-0.2.1.6
 - void-0.7.1
-resolver: ghc-8.0
+resolver: lts-7.18
 
