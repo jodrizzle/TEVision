@@ -1,3 +1,7 @@
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module BlurImage
     ( 
     blurImage
@@ -24,7 +28,7 @@ medianBlurImage image = CV.medianBlur image 13
 gaussianBlurImage :: (depth `In` '[Word8, Word16, Float, Double], channels `In` '[1, 3, 4]) => (M.Mat shape ('S channels) ('S depth)) -> CV.CvExcept (M.Mat shape ('S channels) ('S depth)) 
 gaussianBlurImage image = CV.gaussianBlur (V2 13 13 :: V2 Int32) 0 0 image
 
-blurImage :: forall height0 width0 channels depth . ( depth `In` '[Word8, Word16, Float, Double] , channels `In` '[1, 3, 4]) => M.Mat ('S '[height0, width0]) ('S channels) ('S depth) -> IO (M.Mat ('S '[height0, width0]) ('S channels) ('S depth))
+blurImage :: forall (height0 width0 channels depth). ( depth `In` '[Word8, Word16, Float, Double] , channels `In` '[1, 3, 4]) => M.Mat ('S '[height0, width0]) ('S channels) ('S depth) -> IO (M.Mat ('S '[height0, width0]) ('S channels) ('S depth))
 blurImage image = do
     gaussianBlurred   <- return $ gaussianBlurImage image     
     return $ CV.exceptError $ gaussianBlurred

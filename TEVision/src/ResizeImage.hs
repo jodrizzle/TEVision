@@ -1,3 +1,8 @@
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
+
 module ResizeImage
     ( 
     resizeImage

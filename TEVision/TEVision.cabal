@@ -21,4 +21,6 @@ executable TEVision
                      , opencv <= 3.1  
                      , bytestring
                      , scientific>=0.3.4.9
+                     , mtl
+                     , linear
 
