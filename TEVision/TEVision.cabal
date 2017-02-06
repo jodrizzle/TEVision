@@ -24,4 +24,6 @@ executable TEVision
                      , scientific>=0.3.4.9
                      , mtl
                      , linear
-
+                     , primitive
+                     , vector
+                     , containers
