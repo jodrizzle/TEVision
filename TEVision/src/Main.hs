@@ -31,11 +31,12 @@ main = do
 getKernel::String->Int32
 getKernel reg = read reg
 
+showImage::String-> M.Mat (CV.S '[height, width]) channels depth-> IO ()
 showImage title img = CV.withWindow title $ \window -> do  --display image
                         CV.imshow window img
-                        void $ CV.waitKey 100000                                  
---showImage title = CV.withWindow title $ \window -> do  --display empty window
-  --                      void $ CV.waitKey 100000                                 
+                        void $ CV.waitKey 100000
+                        
+cannyImg::M.Mat (CV.S '[h, w]) channels (CV.S Word8)->(M.Mat (CV.S '[h, w]) (CV.S 1) (CV.S Word8))  
 cannyImg img = CV.exceptError $ CV.canny 30 200 Nothing CV.CannyNormL1 img
 
 medianBlurImg:: (depth `CV.In` '[Word8, Word16, Float], channels `CV.In` '[1, 3, 4]) => (M.Mat shape ('CV.S channels) ('CV.S depth))->Int32-> M.Mat shape ('CV.S channels) ('CV.S depth)
