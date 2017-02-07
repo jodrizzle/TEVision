@@ -10,6 +10,8 @@ Features:
  - Canny edge detection
  - Blurring prior to canny edge detection
  - Find contour points
+ - Draw contour on original image
+ 
  
 Notes:
  - image source files should be in the /data directory.  Call the program from the /src directory.
@@ -17,7 +19,6 @@ Notes:
  - blur region size can be made very big for good quality photos.  Has to be odd number.
 
 TODO:
- - Draw contours
  - Threshold
  - Crop 
  - 4 point transform

@@ -33,17 +33,20 @@ main = do
         let kernel = getKernel blurRegion
         let canniedImg = cannyImg (gaussianBlurImg formImg kernel)
         
-        --detect contours
-        contours <- (findingContours canniedImg)
+        --detect and draw contours
+        contours <- (getContours canniedImg)
+        --let contours = sort contours
+        putStrLn $ show contours
         imgMut <- CV.thaw imgOrig--make mutable matrix 
         let red = CV.toScalar (V4   0   0 255 255 :: V4 Double)--color for drawContours
-        draw_on_imgMut <- CV.drawContours (V.map SA.contourPoints contours) red (CV.OutlineContour CV.LineType_AA 1) imgMut --action to mutate imgMut
+        draw_on_imgMut <- CV.drawContours (V.map SA.contourPoints contours) red (CV.OutlineContour CV.LineType_AA 5) imgMut --action to mutate imgMut
         contoured_img <- CV.freeze imgMut--make matrix immutable again
+        --let cArea = CV.exceptError $ CV.contourArea contours SA.ContourAreaAbsoluteValue
         
         --display results
         showImage "Original" imgOrig
         --showImage "Grayscale" imgGS
-        showImage "Edges (no prefilter)" $ cannyImg formImg
+        --showImage "Edges (no prefilter)" $ cannyImg formImg
         --showImage "Edges (median blur)" $ cannyImg (medianBlurImg formImg kernel)
         showImage "Edges (Gaussian blur)" canniedImg
         showImage "Contours" contoured_img

@@ -1,5 +1,5 @@
 module Utilities (
-    findingContours
+    getContours
    ,showImage
 )   where
 
@@ -18,8 +18,11 @@ showImage title img = CV.withWindow title $ \window -> do  --display image
                         CV.imshow window img
                         void $ CV.waitKey 100000
                         
-findingContours :: PrimMonad m => M.Mat ('CV.S '[h0, w0]) ('CV.S 1) ('CV.S Word8) -> m (V.Vector SA.Contour)
-findingContours image = do
+getContours :: PrimMonad m => M.Mat ('CV.S '[h0, w0]) ('CV.S 1) ('CV.S Word8) -> m (V.Vector SA.Contour)
+getContours image = do
                     imageM <- CV.thaw image
                     contours_vector <- CV.findContours SA.ContourRetrievalList SA.ContourApproximationSimple imageM
                     pure contours_vector
+        
+perspectiveTransform:: M.Mat ('CV.S '[height, width]) channels depth -> M.Mat (M.ShapeT '[3,3]) (CV.S 1) (CV.S Double)-> M.Mat ('CV.S '[height, width]) channels depth
+perspectiveTransform img t  = CV.exceptError $ CV.warpPerspective img t CV.InterNearest False True CV.BorderReplicate
