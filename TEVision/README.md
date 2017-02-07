@@ -9,10 +9,10 @@ Features:
  - Load images (grayscale,color)
  - Canny edge detection
  - Blurring prior to canny edge detection
- - Find contours
+ - Find contour points
  
 Notes:
- - image source files should be in the "data/" directory.
+ - image source files should be in the /data directory.  Call the program from the /src directory.
  - edge detection works slightly better if a grayscale image is used.
  - blur region size can be made very big for good quality photos.  Has to be odd number.
 

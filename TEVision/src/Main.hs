@@ -5,17 +5,17 @@ import qualified OpenCV as CV
 import qualified OpenCV.Internal.Core.Types.Mat as M
 import qualified OpenCV.ImgProc.StructuralAnalysis as SA 
 import qualified Data.Vector as V
---import ApproxPolyDP
-import Control.Monad ( void )
+import Control.Monad (void)
 import Control.Monad.Primitive
---import ConvexHull
-import GHC.Int 
+import Data.List
+import Data.Map
+import Data.Maybe   
+import GHC.Int (Int32)
 import GHC.Word  
-import Linear.V2
---import RamerDouglasPeuckerParts
---import RightReceipt 
+import Linear
 import System.Environment 
---  import Utils
+import Filters
+import Utilities
 
 main :: IO ()
 main = do
@@ -31,56 +31,15 @@ main = do
         let kernel = getKernel blurRegion
         let canniedImg = cannyImg (gaussianBlurImg formImg kernel)
         contours <- (findingContours canniedImg)
-        putStrLn (show contours)
-        imgMut <-  CV.thaw imgOrig
-        --contourImg <- CV.drawContours (V.map SA.contourPoints contours) (CV.toScalar (0::Double,255::Double,0::Double)) (CV.OutlineContour CV.LineType_AA 1) imgMut
-        
-      --  let listOfPoints   = getListOfPoints (V.toList contours)
-      --  let listOfAreas    = dictAreaPoints listOfPoints
-      --  let screenContours = findReceipt listOfAreas
-
-      --  putStrLn (show screenContours)
-        
+        --putStrLn (show contours)
+        imgMut <- CV.thaw imgOrig
+        let red = CV.toScalar (V4   255   0 0 255 :: V4 Double)
+        contourImg <- CV.drawContours (V.map SA.contourPoints contours) red (CV.OutlineContour CV.LineType_AA 1) imgMut
+        imagg <- CV.freeze imgMut
         --display results
-        --showImage "Contours" contourImg
         showImage "Original" imgOrig
-        showImage "Grayscale" imgGS
+        --showImage "Grayscale" imgGS
         showImage "Edges" $ cannyImg formImg
-        showImage "Edges (median blur)" $ cannyImg (medianBlurImg formImg kernel)
+        --showImage "Edges (median blur)" $ cannyImg (medianBlurImg formImg kernel)
         showImage "Edges (Gaussian blur)" canniedImg
-      
-
-{-
-drawContours:: (ToScalar color, PrimMonad m)=> Vector (Vector Point2i)-> color-> ContourDrawMode-> Mut (Mat (S '[h, w]) channels depth) (PrimState m) -> m ()    
-drawContours (V.map contourPoints contours)
-                        ())
-                        (OutlineContour LineType_AA 1)
-                        imgM
-   
-   -}      
-
-      
-      
-      
-getKernel::String->Int32
-getKernel reg = read reg
-
-showImage::String-> M.Mat (CV.S '[height, width]) channels depth-> IO ()
-showImage title img = CV.withWindow title $ \window -> do  --display image
-                        CV.imshow window img
-                        void $ CV.waitKey 100000
-                        
-cannyImg::M.Mat (CV.S '[h, w]) channels (CV.S Word8)->(M.Mat (CV.S '[h, w]) (CV.S 1) (CV.S Word8))  
-cannyImg img = CV.exceptError $ CV.canny 75 200 Nothing CV.CannyNormL2 img
-
-medianBlurImg:: (depth `CV.In` '[Word8, Word16, Float], channels `CV.In` '[1, 3, 4]) => (M.Mat shape ('CV.S channels) ('CV.S depth))->Int32-> M.Mat shape ('CV.S channels) ('CV.S depth)
-medianBlurImg imgO regionSize = CV.exceptError $ CV.medianBlur imgO regionSize
-
-gaussianBlurImg:: (depth `CV.In` '[Word8, Word16, Float, Double], channels `CV.In` '[1, 3, 4])  => (M.Mat shape ('CV.S channels) ('CV.S depth))->Int32-> M.Mat shape ('CV.S channels) ('CV.S depth)
-gaussianBlurImg imgO size = CV.exceptError $ CV.gaussianBlur (V2 size size ::V2 Int32) 0 0 imgO 
-            
-findingContours :: PrimMonad m => M.Mat ('CV.S '[h0, w0]) ('CV.S 1) ('CV.S Word8) -> m (V.Vector SA.Contour)
-findingContours image = do
-                    imageM <- CV.thaw image
-                    contours_vector <- CV.findContours SA.ContourRetrievalList SA.ContourApproximationSimple imageM
-                    pure contours_vector
+        showImage "Contours" imagg
