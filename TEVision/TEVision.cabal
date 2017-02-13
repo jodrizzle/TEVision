@@ -36,3 +36,4 @@ executable TEVision
                      , primitive
                      , vector
                      , containers
+                     , GLFW-b >=1.4.8.1
