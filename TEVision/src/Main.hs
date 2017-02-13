@@ -44,18 +44,17 @@ main = do
       --detect and draw contours----------------------------------------------------------------------
         contours <- (getContours canniedImg)
         imgMut <- CV.thaw imgOrig--make mutable matrix  
-        --let red = CV.toScalar (V4   0   0 255 255 :: V4 Double)--color for drawContours
         CV.drawContours (V.map SA.contourPoints contours) red (CV.OutlineContour CV.LineType_AA 5) imgMut --action to mutate imgMut
         contoured_img <- CV.freeze imgMut--make matrix immutable again
-      --putStrLn $ show $ V.length $ SA.contourPoints $ contours V.! 0 --first contour in contours (Vector of contours;each contour is a Vector of point2i)
         putStrLn $ "Number of outlines detected: " ++ (show $ V.length contours) --print length of vector of contours "how many contours detected?".  One contour consists of many points
-      --putStrLn $ show $ SA.contourPoints $ contours V.! 0
         
-      --let listOfPoints   = (V.toList contours)
-      --putStrLn $ show $ listOfPoints
-      --let listOfAreas    = dictAreaPoints listOfPoints
-      --let screenContours = findCoords listOfAreas
-      --putStrLn $ show rotationMatrix
+        let minRect =  findEnclosingRectangle (SA.contourPoints $ contours V.! 0)
+        let centerRect = CV.rotatedRectCenter minRect  --point2f
+        let centerSize = CV.rotatedRectSize minRect    --size2f
+        let centerAngle = CV.rotatedRectAngle minRect  --float
+        let uprightBounder = CV.rotatedRectBoundingRect minRect  --rect2i     
+        let croppedImg = cropImg imgOrig (V2 40 21) (V2 550 850) 
+            
       --putStrLn $ show $ inContour (SA.contourPoints $ contours V.! 0) $ P.toPoint (V2 0.0 0.0)        --Use matConvertTo to change depth
       --display results-------------------------------------------------------------------------------
         showImage "Original" $ imgOrig
@@ -67,29 +66,4 @@ main = do
       --showImage "Edges (median blur)" $ cannyImg (medianBlurImg formImg kernel)
         showImage "Edges (Gaussian blur)" canniedImg
         showImage "Contours" contoured_img
-
-        showImage "Cropped" $ cropImg imgOrig
-        
-
--- matFromFuncImg = CV.exceptError $ CV.matFromFunc 
---       (Proxy :: Proxy [size, size])
---       (Proxy :: Proxy 4)
---       (Proxy :: Proxy Word8)
---       example
---   where
---     example [y, x] 0 = 255 - normDist (V2 x y ^-^ bluePt )
---     example [y, x] 1 = 255 - normDist (V2 x y ^-^ greenPt)
---     example [y, x] 2 = 255 - normDist (V2 x y ^-^ redPt  )
---     example [y, x] 3 =       normDist (V2 x y ^-^ alphaPt)
---     example _pos _channel = error "impossible"
--- 
--- normDist :: V2 Int -> Word8
--- normDist v = floor $ min 255 $ 255 * Linear.norm (fromIntegral <$> v) / s'
--- 
--- bluePt  = V2 0 0
--- greenPt = V2 s s
--- redPt   = V2 s 0
--- alphaPt = V2 0 s
--- 
--- s = fromInteger $ natVal (size) :: Int
--- s' = fromIntegral s :: Double
+        showImage "Cropped" $ croppedImg

@@ -1,8 +1,8 @@
 module Utilities (  
     cropImg
+   ,findEnclosingRectangle 
    ,getContours
    ,inContour 
-   ,laplacianFilter 
    ,rotationMatrix
    ,showImage
    ,warpAffineImg
@@ -39,10 +39,16 @@ blue        = CV.toScalar (V4 255   0   0 255 :: V4 Double)
 green       = CV.toScalar (V4   0 255   0 255 :: V4 Double)
 red         = CV.toScalar (V4   0   0 255 255 :: V4 Double)
 
-subRect= CV.toRect $ CV.HRect (V2 50 131) (V2 190 60)
-      
-cropImg::M.Mat (CV.S '[height, width]) channels depth -> (M.Mat (CV.S '[CV.D, CV.D]) channels depth)
-cropImg img =  CV.exceptError $ CV.matSubRect img subRect        
+
+-- minAreaRect : Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
+findEnclosingRectangle:: P.IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> CV.RotatedRect
+findEnclosingRectangle pts = SA.minAreaRect pts
+
+subRect:: (V2 Int32)->(V2 Int32)->CV.Rect Int32
+subRect topleft sz = CV.toRect $ CV.HRect topleft sz  --topleft (dist from left, dist from top), rect-size (width, height)
+
+cropImg:: M.Mat (CV.S '[height, width]) channels depth -> (V2 Int32) -> (V2 Int32) -> (M.Mat (CV.S '[CV.D, CV.D]) channels depth)
+cropImg img topleft sz=  CV.exceptError $ CV.matSubRect img $ subRect topleft sz   
 
 getContours :: PrimMonad m => M.Mat ('CV.S '[h0, w0]) ('CV.S 1) ('CV.S Word8) -> m (V.Vector SA.Contour)
 getContours image = do
@@ -54,10 +60,6 @@ inContour:: (CV.IsPoint2 contourPoint2 CFloat, CV.IsPoint2 testPoint2 CFloat)=> 
 inContour cont pt
     | (CV.exceptError $ SA.pointPolygonTest cont pt False) >=0 = True
     | otherwise = False
-    
---has to be grayscale input                    
-laplacianFilter::M.Mat shape ('CV.S 1) ('CV.S Word8)-> M.Mat shape ('CV.S 1) ('CV.S Word8)
-laplacianFilter img = CV.exceptError $ CV.laplacian Nothing Nothing Nothing Nothing img
         
 perspectiveTransform:: M.Mat ('CV.S '[height, width]) channels depth -> M.Mat (M.ShapeT '[3,3]) (CV.S 1) (CV.S Double)-> M.Mat ('CV.S '[height, width]) channels depth
 perspectiveTransform img t  = CV.exceptError $ CV.warpPerspective img t CV.InterNearest False True CV.BorderReplicate
@@ -76,21 +78,3 @@ warpAffineImg img = CV.exceptError $ CV.warpAffine img rotationMatrix CV.InterAr
 
 warpAffineInvImg ::  M.Mat (CV.S '[height, width]) channels depth->(M.Mat (CV.S '[height, width]) channels depth)
 warpAffineInvImg img= CV.exceptError $ CV.warpAffine img rotationMatrix CV.InterCubic True False (CV.BorderConstant black)
-
-
-
-
-
-
-
--- maskFunction::[Int] -> Int -> M.StaticDepthT depth
--- maskFunction [y, x] 0
---     | (inContour $ P.toPoint (V2 x y :: V2 CFloat) CFloat) == True = [y, x]
---     | otherwise = [0, 0]
--- maskFunction [y, x] 1  
---     | (inContour $ P.toPoint (V2 x y :: V2 CFloat) CFloat) == True = [y, x]
---     | otherwise = [0, 0]
--- maskFunction _pos _channel =  error "impossible"
--- 
--- remapImg:: V.Vector SA.Contour -> M.Mat ('CV.S ['CV.S height, 'CV.S width]) ('CV.S channels) ('CV.S depth) -> M.Mat ('CV.S ['CV.S height, 'CV.S width]) ('CV.S channels) ('CV.S depth)
--- remapImg contours img = CV.exceptError $ CV.remap img (CV.matFromFunc (Proxy :: Proxy [height, width]) (Proxy :: Proxy 2) (Proxy :: Proxy Float) maskFunction) CV.InterLinear (CV.BorderConstant black)
