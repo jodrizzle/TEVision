@@ -49,12 +49,12 @@ main = do
         putStrLn $ "Number of outlines detected: " ++ (show $ V.length contours) --print length of vector of contours "how many contours detected?".  One contour consists of many points
         
         let minRect =  findEnclosingRectangle (SA.contourPoints $ contours V.! 0)
-        let centerRect = CV.rotatedRectCenter minRect  --point2f
-        let centerSize = CV.rotatedRectSize minRect    --size2f
-        let centerAngle = CV.rotatedRectAngle minRect  --float
-        let uprightBounder = CV.rotatedRectBoundingRect minRect  --rect2i     
-        let croppedImg = cropImg imgOrig (V2 40 21) (V2 550 850) 
-            
+        let uprightBounder = CV.rotatedRectBoundingRect minRect  --rect2i 
+        let sizeRect = CV.fromSize  (CV.rectSize    uprightBounder)::(V2 Int32) 
+        let topLeftRect  = CV.fromPoint (CV.rectTopLeft uprightBounder)::(V2 Int32)              --  ::(V2 Int32)    rectPoint is a point2, not vector 
+         
+             
+        let croppedImg = cropImg imgOrig topLeftRect sizeRect 
       --putStrLn $ show $ inContour (SA.contourPoints $ contours V.! 0) $ P.toPoint (V2 0.0 0.0)        --Use matConvertTo to change depth
       --display results-------------------------------------------------------------------------------
         showImage "Original" $ imgOrig
