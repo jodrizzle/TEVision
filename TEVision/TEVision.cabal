@@ -21,11 +21,6 @@ executable TEVision
   default-extensions:  ExplicitForAll , TypeFamilies , FlexibleContexts , AllowAmbiguousTypes, TypeOperators, DataKinds
   other-modules:       Filters
                      , Utilities
-                     , ApproxPolyDP
-                     , ConvexHull
-                     , RamerDouglasPeuckerParts
-                     , RightReceipt_CA
-                     , Utils_CA
 
   build-depends:       base >= 4.7 && < 5
                      , opencv <= 3.1  

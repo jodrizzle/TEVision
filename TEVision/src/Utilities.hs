@@ -1,10 +1,11 @@
 module Utilities (  
     cropImg
-   ,findEnclosingRectangle 
+   ,getUprightBoundRect 
    ,getContours
    ,inContour 
    ,rotationMatrix
    ,showImage
+   ,showDetectedObjects
    ,warpAffineImg
    ,warpAffineInvImg
    ,transparent
@@ -43,6 +44,9 @@ red         = CV.toScalar (V4   0   0 255 255 :: V4 Double)
 -- minAreaRect : Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 findEnclosingRectangle:: P.IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> CV.RotatedRect
 findEnclosingRectangle pts = SA.minAreaRect pts
+    
+getUprightBoundRect::   (V.Vector SA.Contour)-> CV.Rect2i 
+getUprightBoundRect contours= CV.rotatedRectBoundingRect $ (findEnclosingRectangle (SA.contourPoints $ contours V.! 0))  --rect2i 
 
 subRect:: (V2 Int32)->(V2 Int32)->CV.Rect Int32
 subRect topleft sz = CV.toRect $ CV.HRect topleft sz  --topleft (dist from left, dist from top), rect-size (width, height)
@@ -72,6 +76,15 @@ showImage title img = CV.withWindow title $ \window -> do  --display image
                         CV.imshow window img
                         CV.resizeWindow window 500 500
                         void $ CV.waitKey 100000
+                        
+showDetectedObjects::Int->(V.Vector SA.Contour)->M.Mat (CV.S '[height, width]) channels depth->IO ()
+showDetectedObjects iter contours imgOrig
+    | (V.null contours)   == True = error "NO OBJECTS DETECTED!"
+    | (V.length contours) == 1    = showImage ("Object "++(show iter)) (cropImg imgOrig (CV.fromPoint (CV.rectTopLeft uprightBounder)::(V2 Int32)) (CV.fromSize  (CV.rectSize uprightBounder)::(V2 Int32)))
+    | otherwise                   = do
+                                    showImage ("Object "++(show iter)) (cropImg imgOrig (CV.fromPoint (CV.rectTopLeft uprightBounder)::(V2 Int32)) (CV.fromSize  (CV.rectSize uprightBounder)::(V2 Int32)))
+                                    showDetectedObjects (iter+1) (V.tail contours) imgOrig
+    where uprightBounder = getUprightBoundRect contours
 
 warpAffineImg :: M.Mat (CV.S '[height, width]) channels depth->(M.Mat (CV.S '[height, width]) channels depth)
 warpAffineImg img = CV.exceptError $ CV.warpAffine img rotationMatrix CV.InterArea False False (CV.BorderConstant black)

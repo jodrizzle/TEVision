@@ -18,10 +18,8 @@ import GHC.Int (Int32)
 import GHC.Word  
 import Graphics.UI.GLFW
 import Linear
-import RightReceipt_CA (findCoords,getListOfPoints)
 import System.Environment
 import Utilities
-import Utils_CA (dictAreaPoints)
 import Foreign.C.Types
 import OpenCV.Internal.C.Types
 
@@ -48,22 +46,18 @@ main = do
         contoured_img <- CV.freeze imgMut--make matrix immutable again
         putStrLn $ "Number of outlines detected: " ++ (show $ V.length contours) --print length of vector of contours "how many contours detected?".  One contour consists of many points
         
-        let minRect =  findEnclosingRectangle (SA.contourPoints $ contours V.! 0)
-        let uprightBounder = CV.rotatedRectBoundingRect minRect  --rect2i 
-        let sizeRect = CV.fromSize  (CV.rectSize    uprightBounder)::(V2 Int32) 
-        let topLeftRect  = CV.fromPoint (CV.rectTopLeft uprightBounder)::(V2 Int32)              --  ::(V2 Int32)    rectPoint is a point2, not vector 
-         
-             
-        let croppedImg = cropImg imgOrig topLeftRect sizeRect 
+       
       --putStrLn $ show $ inContour (SA.contourPoints $ contours V.! 0) $ P.toPoint (V2 0.0 0.0)        --Use matConvertTo to change depth
       --display results-------------------------------------------------------------------------------
-        showImage "Original" $ imgOrig
+        showImage "Original" imgOrig
       --showImage "Warped" $ warpAffineImg imgOrig --transform
       --showImage "Warped" $ warpAffineInvImg $ warpAffineImg imgOrig --apply inverse transform on transformed image
       --showImage "Laplacian" $ laplacianFilter (gaussianBlurImg formImg kernel)
       --showImage "Grayscale" imgGS
-        showImage "Edges (no prefilter)" $ cannyImg formImg
+      --showImage "Edges (no prefilter)" $ cannyImg formImg
       --showImage "Edges (median blur)" $ cannyImg (medianBlurImg formImg kernel)
-        showImage "Edges (Gaussian blur)" canniedImg
+      --showImage "Edges (Gaussian blur)" canniedImg
         showImage "Contours" contoured_img
-        showImage "Cropped" $ croppedImg
+        showDetectedObjects (1) contours imgOrig
+        --showImage "Cropped" $ croppedImg
+        --TODO show all detected images
