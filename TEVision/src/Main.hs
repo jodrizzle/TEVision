@@ -13,15 +13,18 @@ import Data.List
 import Data.Map
 import Data.Maybe    
 import Data.Proxy
-import Filters
 import GHC.Int (Int32)
 import GHC.Word  
 import Graphics.UI.GLFW
 import Linear
 import System.Environment
-import Utilities
 import Foreign.C.Types
 import OpenCV.Internal.C.Types
+
+import Filters
+import ImageIO
+import Transforms
+import Utilities
 
 main :: IO ()
 main = do
@@ -46,8 +49,6 @@ main = do
         contoured_img <- CV.freeze imgMut--make matrix immutable again
         putStrLn $ "Number of outlines detected: " ++ (show $ V.length contours) --print length of vector of contours "how many contours detected?".  One contour consists of many points
         
-       
-      --putStrLn $ show $ inContour (SA.contourPoints $ contours V.! 0) $ P.toPoint (V2 0.0 0.0)        --Use matConvertTo to change depth
       --display results-------------------------------------------------------------------------------
         showImage "Original" imgOrig
       --showImage "Warped" $ warpAffineImg imgOrig --transform
@@ -59,5 +60,3 @@ main = do
       --showImage "Edges (Gaussian blur)" canniedImg
         showImage "Contours" contoured_img
         showDetectedObjects (1) contours imgOrig
-        --showImage "Cropped" $ croppedImg
-        --TODO show all detected images
