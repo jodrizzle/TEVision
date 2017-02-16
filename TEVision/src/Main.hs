@@ -37,6 +37,7 @@ main = do
         imgOrig  <- CV.imdecode CV.ImreadUnchanged <$> B.readFile ("../data/"++fname)      
         imgGS    <- CV.imdecode CV.ImreadGrayscale <$> B.readFile ("../data/"++fname)
         
+        showImage "Original" imgOrig
       --tighten matrix type constraints to work with canny and blur-----------------------------------
         let formImg = CV.exceptError $ M.coerceMat imgGS :: M.Mat ('CV.S '[ 'CV.D, 'CV.D]) ('CV.S 1) ('CV.S Word8)
         let kernel = getKernel blurRegion
@@ -45,18 +46,63 @@ main = do
       --detect and draw contours----------------------------------------------------------------------
         contours <- (getContours canniedImg)
         imgMut <- CV.thaw imgOrig--make mutable matrix  
-        CV.drawContours (V.map SA.contourPoints contours) red (CV.OutlineContour CV.LineType_AA 5) imgMut --action to mutate imgMut
+        CV.drawContours (V.map SA.contourPoints contours) red (CV.OutlineContour CV.LineType_8 2) imgMut --action to mutate imgMut
         contoured_img <- CV.freeze imgMut--make matrix immutable again
-        putStrLn $ "Number of outlines detected: " ++ (show $ V.length contours) --print length of vector of contours "how many contours detected?".  One contour consists of many points
+        putStrLn $ "Number of outlines detected:\t" ++ (show $ V.length contours) --print length of vector of contours "how many contours detected?".  One contour consists of many points
+        putStrLn $ show $ SA.contourPoints $ contours V.! 0
+        let points = (SA.contourPoints (contours V.! 0))
+        putStrLn $ show $ V.length points
+        let diffVec = getDiffVectorXY points (V.head points) getXComp
+        putStrLn $ "\nDifference vector length:\n" ++ show (V.length diffVec)
+        putStrLn $ "\nDifference vector:\n" ++ show diffVec
         
+        let pt1 = points V.! (0*(V.length points)`div`4)
+        let pt2 = points V.! (1*(V.length points)`div`4)
+        let pt3 = points V.! (2*(V.length points)`div`4)
+        let pt4 = V.last points
+        
+        mutImg <-CV.thaw imgOrig
+        CV.circle mutImg (pt1) 20 blue (-1) CV.LineType_AA 0
+        CV.circle mutImg (pt2) 20 blue (-1) CV.LineType_AA 0
+        CV.circle mutImg (pt3) 20 blue (-1) CV.LineType_AA 0
+        CV.circle mutImg (pt4) 20 blue (-1) CV.LineType_AA 0
+        circled_img <- CV.freeze mutImg
+        showImage "Circles" circled_img
+        
+        showImage "Edges (Gaussian blur)" canniedImg
+        showImage "Contours" contoured_img
+      
       --display results-------------------------------------------------------------------------------
-        showImage "Original" imgOrig
       --showImage "Warped" $ warpAffineImg imgOrig --transform
       --showImage "Warped" $ warpAffineInvImg $ warpAffineImg imgOrig --apply inverse transform on transformed image
       --showImage "Laplacian" $ laplacianFilter (gaussianBlurImg formImg kernel)
       --showImage "Grayscale" imgGS
       --showImage "Edges (no prefilter)" $ cannyImg formImg
       --showImage "Edges (median blur)" $ cannyImg (medianBlurImg formImg kernel)
-      --showImage "Edges (Gaussian blur)" canniedImg
-        showImage "Contours" contoured_img
         showDetectedObjects (1) contours imgOrig
+     
+
+--get features
+{-let features = getFeatures canniedImg contours
+mutImg <-CV.thaw imgOrig
+CV.circle mutImg (round <$> (features V.! 0)::V2 Int32) 20 blue (-1) CV.LineType_AA 0
+CV.circle mutImg (round <$> (features V.! 1)::V2 Int32) 20 blue (-1) CV.LineType_AA 0
+--overlayCircles mutImg features $ V.length features
+circled_img <- CV.freeze mutImg
+putStrLn $ "Number of features detected: "++(show $ V.length features)
+showImage "Circles" circled_img
+-}
+{-CV.withMatM (Proxy :: Proxy [height, width]) 
+(Proxy :: Proxy channels) 
+(Proxy :: Proxy depth)
+white $ imgM -> do
+void $ CV.matCopyToM imgM (V2 0 0) imgOrig Nothing 
+forM_ features $ f -> do
+CV.circle imgM (round <$> f :: V2 Int32) 2 blue 5 LineType_AA 0-}
+{-overlayCircles:: (PrimMonad m)=>m (CV.Mutable a (PrimState m))->V.Vector (V2 Float)->Int->m ()
+overlayCircles imgM feats numFeats
+| numFeats==0 = error "No features to draw!"
+| numFeats==1 = CV.circle imgM (round <$> (feats V.! 0)::V2 Int32) 20 blue (-1) CV.LineType_AA 0
+| otherwise   = do
+CV.circle imgM (round <$> (feats V.! 0)::V2 Int32) 20 blue (-1) CV.LineType_AA 0
+overlayCircles imgM (V.tail feats) (numFeats-1)-}

@@ -2,6 +2,10 @@ module Utilities (
     getUprightBoundRect 
    ,getContours
    ,inContour 
+   ,getFeatures
+   ,getDiffVectorXY
+   ,getXComp
+   ,getYComp
    ,transparent
    ,white
    ,black
@@ -34,7 +38,6 @@ blue        = CV.toScalar (V4 255   0   0 255 :: V4 Double)
 green       = CV.toScalar (V4   0 255   0 255 :: V4 Double)
 red         = CV.toScalar (V4   0   0 255 255 :: V4 Double)
 
-
 -- minAreaRect : Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 findEnclosingRectangle:: P.IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> CV.RotatedRect
 findEnclosingRectangle pts = SA.minAreaRect pts
@@ -52,3 +55,19 @@ inContour:: (CV.IsPoint2 contourPoint2 CFloat, CV.IsPoint2 testPoint2 CFloat)=> 
 inContour cont pt
     | (CV.exceptError $ SA.pointPolygonTest cont pt False) >=0 = True
     | otherwise = False
+    
+getFeatures:: depth `CV.In` '[CV.S Word8, CV.S Float, CV.D]=> M.Mat (CV.S '[h, w]) (CV.S 1) depth->V.Vector SA.Contour->V.Vector (V2 Float)
+getFeatures canniedImg contours = CV.goodFeaturesToTrack canniedImg {-(fromIntegral (4*(V.length contours)))-} 1000 0.95 100 Nothing Nothing $ CV.HarrisDetector 0.2 --50 is the min distance between two features
+
+     
+getDiffVectorXY::V.Vector CV.Point2i->CV.Point2i->(V2 Int32 -> Int32)->V.Vector Int32
+getDiffVectorXY pts headPt getComp
+    | V.length pts == 0 =  V.empty
+    | V.length pts == 1 =  V.singleton $ (getComp $ P.fromPoint headPt) - (getComp $ P.fromPoint $ pts V.! 0)
+    | otherwise         = (V.singleton $ (getComp $ P.fromPoint $ pts V.! 1) - (getComp $ P.fromPoint $ pts V.! 0)) V.++ (getDiffVectorXY (V.tail pts) headPt getComp)     
+    
+getXComp:: V2 Int32->Int32
+getXComp (V2 x _) = x
+-- 
+getYComp::V2 Int32->Int32
+getYComp (V2 _ y) = y
