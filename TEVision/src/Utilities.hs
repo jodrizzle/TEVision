@@ -60,11 +60,11 @@ getFeatures:: depth `CV.In` '[CV.S Word8, CV.S Float, CV.D]=> M.Mat (CV.S '[h, w
 getFeatures canniedImg contours = CV.goodFeaturesToTrack canniedImg {-(fromIntegral (4*(V.length contours)))-} 1000 0.95 100 Nothing Nothing $ CV.HarrisDetector 0.2 --50 is the min distance between two features
 
      
-getDiffVectorXY::V.Vector CV.Point2i->CV.Point2i->(V2 Int32 -> Int32)->V.Vector Int32
+getDiffVectorXY::V.Vector CV.Point2i->CV.Point2i->(V2 Int32 -> Int32)->[Int32]
 getDiffVectorXY pts headPt getComp
-    | V.length pts == 0 =  V.empty
-    | V.length pts == 1 =  V.singleton $ (getComp $ P.fromPoint headPt) - (getComp $ P.fromPoint $ pts V.! 0)
-    | otherwise         = (V.singleton $ (getComp $ P.fromPoint $ pts V.! 1) - (getComp $ P.fromPoint $ pts V.! 0)) V.++ (getDiffVectorXY (V.tail pts) headPt getComp)     
+    | V.length pts == 0 =  []
+    | V.length pts == 1 =  [(getComp $ P.fromPoint headPt) - (getComp $ P.fromPoint $ pts V.! 0)]
+    | otherwise         = [(getComp $ P.fromPoint $ pts V.! 1) - (getComp $ P.fromPoint $ pts V.! 0)] ++ (getDiffVectorXY (V.tail pts) headPt getComp)     
     
 getXComp:: V2 Int32->Int32
 getXComp (V2 x _) = x
