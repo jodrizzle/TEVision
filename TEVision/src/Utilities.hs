@@ -1,11 +1,19 @@
 module Utilities (  
     getUprightBoundRect 
+   ,getRectCorners
+   ,findEnclosingRectangle
    ,getContours
    ,inContour 
    ,getFeatures
    ,getDiffVectorXY
+   ,getDiffList
    ,getXComp
    ,getYComp
+   ,makePoint2i
+   ,getPt1
+   ,getPt2
+   ,getPt3
+   ,getPt4
    ,transparent
    ,white
    ,black
@@ -17,18 +25,20 @@ module Utilities (
 import Control.Monad (void)
 import Control.Monad.Primitive
 import Data.Proxy
+import Foreign.C.Types 
 import GHC.Int (Int32)
 import GHC.Word 
-import Filters
 import Linear
+import OpenCV.Internal.C.Types
 import System.Environment 
 import qualified OpenCV as CV
-import Foreign.C.Types 
-import qualified OpenCV.Core.Types.Point as P
-import OpenCV.Internal.C.Types
 import qualified OpenCV.Internal.Core.Types.Mat as M
+import qualified OpenCV.Core.Types.Point as P
 import qualified OpenCV.ImgProc.StructuralAnalysis as SA 
 import qualified Data.Vector as V
+
+import Filters
+import ModuleXOR
 
 transparent, white, black, blue, green, red   :: CV.Scalar
 transparent = CV.toScalar (V4 255 255 255   0 :: V4 Double)
@@ -38,12 +48,38 @@ blue        = CV.toScalar (V4 255   0   0 255 :: V4 Double)
 green       = CV.toScalar (V4   0 255   0 255 :: V4 Double)
 red         = CV.toScalar (V4   0   0 255 255 :: V4 Double)
 
+getPt1::(CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)->V2 Int32
+getPt1 (x,_,_,_) = makePoint2i $ P.fromPoint x
+
+getPt2::(CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)->V2 Int32
+getPt2 (_,x,_,_) = makePoint2i $ P.fromPoint x
+
+getPt3::(CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)->V2 Int32
+getPt3 (_,_,x,_) = makePoint2i $ P.fromPoint x
+
+getPt4::(CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)->V2 Int32
+getPt4 (_,_,_,x) = makePoint2i $ P.fromPoint x
+
+makePoint2i::(V2 CFloat)->V2 Int32
+makePoint2i (V2 x y) = V2 (round x) (round y) 
+
+--getXComp (V2 x _) = fromIntegral (x :: Int32) :: Int
+
+sameSign::Int32->Bool->Bool
+sameSign num sign = not $ xor'' (sgn num) sign
+
+sgn::Int32->Bool --True if positive, False if negative
+sgn x = (abs x - x) == 0
+
 -- minAreaRect : Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 findEnclosingRectangle:: P.IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> CV.RotatedRect
 findEnclosingRectangle pts = SA.minAreaRect pts
     
 getUprightBoundRect::   (V.Vector SA.Contour)-> CV.Rect2i 
 getUprightBoundRect contours= CV.rotatedRectBoundingRect $ (findEnclosingRectangle (SA.contourPoints $ contours V.! 0))  --rect2i  
+
+getRectCorners::CV.RotatedRect->(CV.Point2f, CV.Point2f, CV.Point2f, CV.Point2f)
+getRectCorners rotRect = CV.rotatedRectPoints rotRect
 
 getContours :: PrimMonad m => M.Mat ('CV.S '[h0, w0]) ('CV.S 1) ('CV.S Word8) -> m (V.Vector SA.Contour)
 getContours image = do
@@ -54,20 +90,33 @@ getContours image = do
 inContour:: (CV.IsPoint2 contourPoint2 CFloat, CV.IsPoint2 testPoint2 CFloat)=> V.Vector (contourPoint2 CFloat)->testPoint2 CFloat -> Bool
 inContour cont pt
     | (CV.exceptError $ SA.pointPolygonTest cont pt False) >=0 = True
-    | otherwise = False
+    | otherwise                                                = False
     
 getFeatures:: depth `CV.In` '[CV.S Word8, CV.S Float, CV.D]=> M.Mat (CV.S '[h, w]) (CV.S 1) depth->V.Vector SA.Contour->V.Vector (V2 Float)
 getFeatures canniedImg contours = CV.goodFeaturesToTrack canniedImg {-(fromIntegral (4*(V.length contours)))-} 1000 0.95 100 Nothing Nothing $ CV.HarrisDetector 0.2 --50 is the min distance between two features
 
      
-getDiffVectorXY::V.Vector CV.Point2i->CV.Point2i->(V2 Int32 -> Int32)->[Int32]
+getDiffVectorXY::V.Vector CV.Point2i->CV.Point2i->(V2 Int32 -> Int)->[Int]
 getDiffVectorXY pts headPt getComp
     | V.length pts == 0 =  []
     | V.length pts == 1 =  [(getComp $ P.fromPoint headPt) - (getComp $ P.fromPoint $ pts V.! 0)]
     | otherwise         = [(getComp $ P.fromPoint $ pts V.! 1) - (getComp $ P.fromPoint $ pts V.! 0)] ++ (getDiffVectorXY (V.tail pts) headPt getComp)     
+
+getDiffList::[Int32]->Int32->[Int32]
+getDiffList pts headPt
+    | length pts ==0 = []
+    | length pts ==1 = [headPt - pts !! 0]
+    | otherwise      = [pts !! 1 - pts !! 0]++getDiffList (tail pts) headPt
     
-getXComp:: V2 Int32->Int32
-getXComp (V2 x _) = x
+getXComp:: V2 Int32->Int
+getXComp (V2 x _) = fromIntegral (x :: Int32) :: Int
 -- 
-getYComp::V2 Int32->Int32
-getYComp (V2 _ y) = y
+getYComp::V2 Int32->Int
+getYComp (V2 _ y) = fromIntegral (y :: Int32) :: Int
+
+{-point2iToPointTuple::V.Vector CV.Point2i->[PointTuple]
+point2iToPointTuple pts
+    | V.length pts == 0 = []
+    | V.length pts == 1 = [(getXComp (P.fromPoint (pts V.! 0)), getYComp (P.fromPoint (pts V.! 0)))]
+    | otherwise         = [(getXComp (P.fromPoint (pts V.! 0)), getYComp (P.fromPoint (pts V.! 0)))] ++ (point2iToPointTuple $ V.tail pts) 
+    -}
