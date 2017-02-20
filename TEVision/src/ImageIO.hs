@@ -34,34 +34,14 @@ showDetectedObjects iter contours imgOrig
 showObjectsWithCorners::Int->(V.Vector SA.Contour)->M.Mat (CV.S '[height, width]) channels depth->IO ()
 showObjectsWithCorners iter contours imgOrig
     | (V.null contours)   == True = error "NO OBJECTS DETECTED!"
-    | (V.length contours) == 1    = do
-        let points = (SA.contourPoints (contours V.! 0))
-        let rotRect = findEnclosingRectangle points
-        let a  = getRectCorners rotRect
-        let p1 = getPt 1 a    
-        let p2 = getPt 2 a
-        let p3 = getPt 3 a
-        let p4 = getPt 4 a
-        mutImg <-CV.thaw imgOrig
-        CV.circle mutImg (P.toPoint p1) 4 blue (-1) CV.LineType_AA 0
-        CV.circle mutImg (P.toPoint p2) 4 blue (-1) CV.LineType_AA 0
-        CV.circle mutImg (P.toPoint p3) 4 blue (-1) CV.LineType_AA 0
-        CV.circle mutImg (P.toPoint p4) 4 blue (-1) CV.LineType_AA 0
-        circled_img <- CV.freeze mutImg
-        showImage ("Corners of object "++show iter) circled_img
     | otherwise                   = do
-        let points = (SA.contourPoints (contours V.! 0))
-        let rotRect = findEnclosingRectangle points
-        let a  = getRectCorners rotRect
-        let p1 = getPt 1 a    
-        let p2 = getPt 2 a
-        let p3 = getPt 3 a
-        let p4 = getPt 4 a
+        let a  = orderPts $ getRectCorners $ findEnclosingRectangle $ SA.contourPoints $ contours V.! 0
         mutImg <-CV.thaw imgOrig
-        --TODO make circle sizes proportional to image size
-        CV.circle mutImg (P.toPoint p1) 4 blue (-1) CV.LineType_AA 0
-        CV.circle mutImg (P.toPoint p2) 4 blue (-1) CV.LineType_AA 0
-        CV.circle mutImg (P.toPoint p3) 4 blue (-1) CV.LineType_AA 0
-        CV.circle mutImg (P.toPoint p4) 4 blue (-1) CV.LineType_AA 0
+        CV.circle mutImg (P.toPoint (getPt 1 a)) 4 blue (-1) CV.LineType_AA 0
+        CV.circle mutImg (P.toPoint (getPt 2 a)) 4 blue (-1) CV.LineType_AA 0
+        CV.circle mutImg (P.toPoint (getPt 3 a)) 4 blue (-1) CV.LineType_AA 0
+        CV.circle mutImg (P.toPoint (getPt 4 a)) 4 blue (-1) CV.LineType_AA 0
         circled_img <- CV.freeze mutImg
-        showObjectsWithCorners (iter+1) (V.tail contours) circled_img
+        if (V.length contours>1) 
+           then showObjectsWithCorners (iter+1) (V.tail contours) circled_img 
+           else showImage ("Corners of object "++show iter) circled_img

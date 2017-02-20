@@ -1,16 +1,17 @@
 module Utilities (  
-    getUprightBoundRect 
-   ,getRectCorners
-   ,findEnclosingRectangle
+    findEnclosingRectangle
    ,getContours
-   ,inContour 
-   ,getFeatures
-   ,getDiffVectorXY
    ,getDiffList
+   ,getDiffVectorXY
+   ,getFeatures
+   ,getPt 
+   ,getRectCorners
+   ,getUprightBoundRect
    ,getXComp
    ,getYComp
+   ,inContour 
    ,makePoint2i
-   ,getPt
+   ,orderPts
    ,transparent
    ,white
    ,black
@@ -21,6 +22,8 @@ module Utilities (
 
 import Control.Monad (void)
 import Control.Monad.Primitive
+import Data.Function
+import Data.List
 import Data.Proxy
 import Foreign.C.Types 
 import GHC.Int (Int32)
@@ -37,6 +40,8 @@ import qualified Data.Vector as V
 import Filters
 import ModuleXOR
 
+type RectCornersFloat = (CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)
+
 transparent, white, black, blue, green, red   :: CV.Scalar
 transparent = CV.toScalar (V4 255 255 255   0 :: V4 Double)
 white       = CV.toScalar (V4 255 255 255 255 :: V4 Double)
@@ -45,7 +50,25 @@ blue        = CV.toScalar (V4 255   0   0 255 :: V4 Double)
 green       = CV.toScalar (V4   0 255   0 255 :: V4 Double)
 red         = CV.toScalar (V4   0   0 255 255 :: V4 Double)
 
-getPt::Int32->(CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)->V2 Int32
+orderPts::RectCornersFloat-> RectCornersFloat --TL,TR,BL,BR
+orderPts pts = (topLeft pts, topRight pts, bottomLeft pts, bottomRight pts) 
+
+topLeft::RectCornersFloat->CV.Point2f
+topLeft     = P.toPoint . listToValue . take 1 . sortBy (compare `on` getXCompFloat) . take 2 . sortBy (compare `on` getYCompFloat) . makeList
+topRight::RectCornersFloat->CV.Point2f
+topRight    = P.toPoint . listToValue . drop 1 . sortBy (compare `on` getXCompFloat) . take 2 . sortBy (compare `on` getYCompFloat) . makeList
+bottomLeft::RectCornersFloat->CV.Point2f
+bottomLeft  = P.toPoint . listToValue . take 1 . sortBy (compare `on` getXCompFloat) . drop 2 . sortBy (compare `on` getYCompFloat) . makeList
+bottomRight::RectCornersFloat->CV.Point2f
+bottomRight = P.toPoint . listToValue . drop 1 . sortBy (compare `on` getXCompFloat) . drop 2 . sortBy (compare `on` getYCompFloat) . makeList
+
+listToValue::[V2 CFloat]->V2 CFloat
+listToValue (x:xs) = x
+
+makeList::RectCornersFloat->[V2 CFloat]
+makeList (x,y,z,w) = [ P.fromPoint x, P.fromPoint y, P.fromPoint z, P.fromPoint w ]
+
+getPt::Int32->RectCornersFloat->V2 Int32
 getPt num (x,y,z,w)
     |   num==1 = makePoint2i $ P.fromPoint x
     |   num==2 = makePoint2i $ P.fromPoint y
@@ -53,25 +76,28 @@ getPt num (x,y,z,w)
     |   num==4 = makePoint2i $ P.fromPoint w
 
 makePoint2i::(V2 CFloat)->V2 Int32
-makePoint2i (V2 x y) = V2 (round x) (round y) 
+makePoint2i (V2 x y) = V2 (round x) (round y)
 
---getXComp (V2 x _) = fromIntegral (x :: Int32) :: Int
+getXCompFloat::V2 CFloat->CFloat
+getXCompFloat (V2 x _) =  x 
+getYCompFloat::V2 CFloat->CFloat
+getYCompFloat (V2 _ y) =  y 
 
-sameSign::Int32->Bool->Bool
-sameSign num sign = not $ xor'' (sgn num) sign
-
-sgn::Int32->Bool --True if positive, False if negative
-sgn x = (abs x - x) == 0
+getXComp:: V2 Int32->Int
+getXComp (V2 x _) = fromIntegral (x :: Int32) :: Int
+ 
+getYComp::V2 Int32->Int
+getYComp (V2 _ y) = fromIntegral (y :: Int32) :: Int
 
 -- minAreaRect : Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 findEnclosingRectangle:: P.IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> CV.RotatedRect
-findEnclosingRectangle pts = SA.minAreaRect pts
+findEnclosingRectangle = SA.minAreaRect
     
 getUprightBoundRect::   (V.Vector SA.Contour)-> CV.Rect2i 
 getUprightBoundRect contours= CV.rotatedRectBoundingRect $ (findEnclosingRectangle (SA.contourPoints $ contours V.! 0))  --rect2i  
 
-getRectCorners::CV.RotatedRect->(CV.Point2f, CV.Point2f, CV.Point2f, CV.Point2f)
-getRectCorners rotRect = CV.rotatedRectPoints rotRect
+getRectCorners::CV.RotatedRect->RectCornersFloat
+getRectCorners = CV.rotatedRectPoints
 
 getContours :: PrimMonad m => M.Mat ('CV.S '[h0, w0]) ('CV.S 1) ('CV.S Word8) -> m (V.Vector SA.Contour)
 getContours image = do
@@ -99,12 +125,6 @@ getDiffList pts headPt
     | length pts ==0 = []
     | length pts ==1 = [headPt - pts !! 0]
     | otherwise      = [pts !! 1 - pts !! 0]++getDiffList (tail pts) headPt
-    
-getXComp:: V2 Int32->Int
-getXComp (V2 x _) = fromIntegral (x :: Int32) :: Int
--- 
-getYComp::V2 Int32->Int
-getYComp (V2 _ y) = fromIntegral (y :: Int32) :: Int
 
 {-point2iToPointTuple::V.Vector CV.Point2i->[PointTuple]
 point2iToPointTuple pts
