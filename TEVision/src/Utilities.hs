@@ -7,6 +7,8 @@ module Utilities (
    ,getPt 
    ,getRectCorners
    ,getUprightBoundRect
+   ,getIntXComp
+   ,getIntYComp
    ,getXComp
    ,getYComp
    ,inContour 
@@ -25,7 +27,7 @@ import Control.Monad.Primitive
 import Data.Function
 import Data.List
 import Data.Proxy
-import Foreign.C.Types 
+import Foreign.C.Types
 import GHC.Int (Int32)
 import GHC.Word 
 import Linear
@@ -54,13 +56,16 @@ orderPts::RectCornersFloat-> RectCornersFloat --TL,TR,BL,BR
 orderPts pts = (topLeft pts, topRight pts, bottomLeft pts, bottomRight pts) 
 
 topLeft::RectCornersFloat->CV.Point2f
-topLeft     = P.toPoint . listToValue . take 1 . sortBy (compare `on` getXCompFloat) . take 2 . sortBy (compare `on` getYCompFloat) . makeList
+topLeft     = P.toPoint . listToValue . take 1 . sortBy (compare `on` getXComp) . take 2 . sortBy (compare `on` getYComp) . makeList
+
 topRight::RectCornersFloat->CV.Point2f
-topRight    = P.toPoint . listToValue . drop 1 . sortBy (compare `on` getXCompFloat) . take 2 . sortBy (compare `on` getYCompFloat) . makeList
+topRight    = P.toPoint . listToValue . drop 1 . sortBy (compare `on` getXComp) . take 2 . sortBy (compare `on` getYComp) . makeList
+
 bottomLeft::RectCornersFloat->CV.Point2f
-bottomLeft  = P.toPoint . listToValue . take 1 . sortBy (compare `on` getXCompFloat) . drop 2 . sortBy (compare `on` getYCompFloat) . makeList
+bottomLeft  = P.toPoint . listToValue . take 1 . sortBy (compare `on` getXComp) . drop 2 . sortBy (compare `on` getYComp) . makeList
+
 bottomRight::RectCornersFloat->CV.Point2f
-bottomRight = P.toPoint . listToValue . drop 1 . sortBy (compare `on` getXCompFloat) . drop 2 . sortBy (compare `on` getYCompFloat) . makeList
+bottomRight = P.toPoint . listToValue . drop 1 . sortBy (compare `on` getXComp) . drop 2 . sortBy (compare `on` getYComp) . makeList
 
 listToValue::[V2 CFloat]->V2 CFloat
 listToValue (x:xs) = x
@@ -78,17 +83,13 @@ getPt num (x,y,z,w)
 makePoint2i::(V2 CFloat)->V2 Int32
 makePoint2i (V2 x y) = V2 (round x) (round y)
 
-getXCompFloat::V2 CFloat->CFloat
-getXCompFloat (V2 x _) =  x 
-getYCompFloat::V2 CFloat->CFloat
-getYCompFloat (V2 _ y) =  y 
+getXComp::V2 CFloat->CFloat
+getXComp (V2 x _) =  x 
+getYComp::V2 CFloat->CFloat
+getYComp (V2 _ y) =  y 
 
-getXComp:: V2 Int32->Int
-getXComp (V2 x _) = fromIntegral (x :: Int32) :: Int
- 
-getYComp::V2 Int32->Int
-getYComp (V2 _ y) = fromIntegral (y :: Int32) :: Int
-
+getIntXComp (V2 x _) = x
+getIntYComp (V2 _ y) = y
 -- minAreaRect : Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 findEnclosingRectangle:: P.IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> CV.RotatedRect
 findEnclosingRectangle = SA.minAreaRect

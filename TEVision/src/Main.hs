@@ -53,7 +53,7 @@ main = do
         showImage "Contours" contoured_img        
         --showImage "Edges (Gaussian blur)" canniedImg      
       --display results-------------------------------------------------------------------------------
-        --showDetectedObjects (1) contours imgOrig
+        showDetectedObjects (1) contours imgOrig
         showObjectsWithCorners (1) contours imgOrig
 
         
