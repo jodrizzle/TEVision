@@ -10,10 +10,7 @@ module Utilities (
    ,getXComp
    ,getYComp
    ,makePoint2i
-   ,getPt1
-   ,getPt2
-   ,getPt3
-   ,getPt4
+   ,getPt
    ,transparent
    ,white
    ,black
@@ -48,17 +45,12 @@ blue        = CV.toScalar (V4 255   0   0 255 :: V4 Double)
 green       = CV.toScalar (V4   0 255   0 255 :: V4 Double)
 red         = CV.toScalar (V4   0   0 255 255 :: V4 Double)
 
-getPt1::(CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)->V2 Int32
-getPt1 (x,_,_,_) = makePoint2i $ P.fromPoint x
-
-getPt2::(CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)->V2 Int32
-getPt2 (_,x,_,_) = makePoint2i $ P.fromPoint x
-
-getPt3::(CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)->V2 Int32
-getPt3 (_,_,x,_) = makePoint2i $ P.fromPoint x
-
-getPt4::(CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)->V2 Int32
-getPt4 (_,_,_,x) = makePoint2i $ P.fromPoint x
+getPt::Int32->(CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)->V2 Int32
+getPt num (x,y,z,w)
+    |   num==1 = makePoint2i $ P.fromPoint x
+    |   num==2 = makePoint2i $ P.fromPoint y
+    |   num==3 = makePoint2i $ P.fromPoint z
+    |   num==4 = makePoint2i $ P.fromPoint w
 
 makePoint2i::(V2 CFloat)->V2 Int32
 makePoint2i (V2 x y) = V2 (round x) (round y) 

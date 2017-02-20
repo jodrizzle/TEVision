@@ -54,19 +54,21 @@ main = do
         let points = (SA.contourPoints (contours V.! 0))
         let rotRect = findEnclosingRectangle points
         let a  = getRectCorners rotRect
-        let p1 = getPt1 a    
-        let p2 = getPt2 a
-        let p3 = getPt3 a
-        let p4 = getPt4 a
+        let p1 = getPt 1 a    
+        let p2 = getPt 2 a
+        let p3 = getPt 3 a
+        let p4 = getPt 4 a
+        
         
         mutImg <-CV.thaw imgOrig
-        CV.circle mutImg (P.toPoint p1) 4 blue (-1) CV.LineType_AA 0 --point2i
+        
+        CV.circle mutImg (P.toPoint p1) 4 blue (-1) CV.LineType_AA 0
         CV.circle mutImg (P.toPoint p2) 4 blue (-1) CV.LineType_AA 0
         CV.circle mutImg (P.toPoint p3) 4 blue (-1) CV.LineType_AA 0
         CV.circle mutImg (P.toPoint p4) 4 blue (-1) CV.LineType_AA 0
         circled_img <- CV.freeze mutImg
         showImage "Contours" contoured_img
-        showImage "Circles" circled_img
+        showImage "Corners" circled_img
         
         --showImage "Edges (Gaussian blur)" canniedImg
       

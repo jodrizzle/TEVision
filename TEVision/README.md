@@ -11,15 +11,12 @@ Features:
  - Blurring prior to canny edge detection
  - Find contour points
  - Draw contour on original image
- 
+ - Find approximate corners of document and indicate on original
  
 Notes:
  - image source files should be in the /data directory.  Call the program from the /src directory.
- - edge detection works slightly better if a grayscale image is used.
- - blur region size can be made very big for good quality photos.  Has to be odd number.
 
 TODO:
- - Threshold
- - Crop 
  - 4 point transform
+ - Threshold
  
