@@ -8,11 +8,8 @@ flags:
 extra-package-dbs: []
 packages:
 - location:
-    git: https://github.com/LumiGuide/haskell-opencv.git
-    commit: 9649f7cdd4b7b1f6e5ddd859d63658a33ba42b3d
-- location:
-    git: https://github.com/basvandijk/scientific.git
-    commit: 9ef2876fe9feb5bc97b005900097462761ad12aa
+    git: https://github.com/johanjvv089/haskell-opencv.git
+    commit: 5e23ff49bc3dfbd852a4226e7856b77d9ff863d6
 - '.'
 extra-deps:
 - Glob-0.7.14

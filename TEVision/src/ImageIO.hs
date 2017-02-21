@@ -40,8 +40,8 @@ showDetectedObjects iter contours imgOrig
         let croppedImg = (cropImg imgOrig (CV.fromPoint (CV.rectTopLeft uprightBounder)::(V2 Int32)) dims) 
         showImage ("Object "++(show iter)) croppedImg
         showDimensions dims iter
-      --  t_Matrix <- CV.newMatx33d 1.31678 0.116182 (-179.158) (-0.124742) 1.40184 0.0182986 0.000797832 0.000793051 0.643084
-        t_Matrix <- CV.newMatx33d 1.31678 (-0.124742) 0.000797832 0.116182  1.40184 0.000793051 (-179.158)  0.0182986 0.643084
+        t_Matrix <- CV.newMatx33d 1.31678 0.116182 (-179.158) (-0.124742) 1.40184 0.0182986 0.000797832 0.000793051 0.643084
+      --  t_Matrix <- CV.newMatx33d 1.31678 (-0.124742) 0.000797832 0.116182  1.40184 0.000793051 (-179.158)  0.0182986 0.643084
         let persT = CV.exceptError $ M.coerceMat (CV.toMat t_Matrix) :: M.Mat ('CV.S '[ 'CV.S 3, 'CV.S 3]) ('CV.S 1) ('CV.S Double) 
         showImage ("perspective corrected") (perspectiveTransform imgOrig persT)
         when (V.length contours > 1) $ showDetectedObjects (iter+1) (V.tail contours) imgOrig   
@@ -68,5 +68,5 @@ showObjectsWithCorners iter contours imgOrig
 
 showDimensions:: V2 Int32->Int-> IO ()
 showDimensions dims iter = do
-    putStrLn ("Height of matrix "++(show iter)++" (y_max): "++show  ((getIntXComp dims) - 1))
-    putStrLn ("Width of matrix  "++(show iter)++" (x_max): "++show  ((getIntYComp dims) - 1))
+    putStrLn ("Height of matrix "++(show iter)++" (y_max): "++show  ((getIntYComp dims)))
+    putStrLn ("Width of matrix  "++(show iter)++" (x_max): "++show  ((getIntXComp dims)))
