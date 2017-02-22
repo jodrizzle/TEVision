@@ -37,7 +37,8 @@ showDetectedObjects::Int->(V.Vector SA.Contour)->M.Mat (CV.S '[height, width]) c
 showDetectedObjects iter contours imgOrig imgGS
     | (V.null contours)   == True = putStrLn "NO OBJECTS DETECTED!"
     | otherwise                   = do
-        let a  = orderPts $ getRectCorners $ findEnclosingRectangle $ SA.contourPoints $ contours V.! 0
+        let contour = SA.contourPoints $ contours V.! 0
+        let a  = orderPts $ getRectCorners $ findEnclosingRectangle contour
         let dims = (CV.fromSize  (CV.rectSize uprightBounder)::(V2 Int32))
         --let croppedImg = (cropImg imgOrig (CV.fromPoint (CV.rectTopLeft uprightBounder)::(V2 Int32)) dims) 
         --showImage ("Object "++(show iter)) croppedImg
@@ -46,7 +47,9 @@ showDetectedObjects iter contours imgOrig imgGS
         let dstVec = V.fromList [(V2 0 0),    (V2 (fromIntegral $ getIntXComp dims) 0),  (V2 0 (fromIntegral $ getIntYComp dims)) , (V2 (fromIntegral $ getIntXComp dims) (fromIntegral $ getIntYComp dims))]
         let t_pers = CV.getPerspectiveTransform srcVec dstVec
         let uprightImg = perspectiveTransform imgGS t_pers
-        showImage ("perspective corrected and cropped") (threshBinary $ cropImg uprightImg (V2 0 0) dims)
+        let perimeter = CV.exceptError $ CV.arcLength contour True
+        putStrLn $ "Perimeter of object "++show iter++":\t"++ show (round perimeter)
+        showImage ("perspective corrected and cropped, perimeter is "++show (round perimeter)) (threshBinary $ cropImg uprightImg (V2 0 0) dims)
         when (V.length contours > 1) $ showDetectedObjects (iter+1) (V.tail contours) imgOrig imgGS   
     where uprightBounder = getUprightBoundRect contours
         

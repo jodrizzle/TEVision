@@ -2,7 +2,7 @@ Author:Johan Jansen van Vuuren
 
 Version:0.1
 
-Date:21/02/2016
+Date:21/02/2016     
 
 Usage:
  - stack exec TEVision <filename.extension> <blur_region_size>
@@ -20,5 +20,6 @@ Notes:
  - image source files should be in the /data directory.  Call the program from the /src directory.
 
 TODO:
+ - implement find arc length for use in approxpolydp
  - implement polygon approximation
  
