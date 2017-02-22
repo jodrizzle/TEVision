@@ -4,6 +4,7 @@ module Utilities (
    ,getDiffList
    ,getDiffVectorXY
    ,getFeatures
+   ,getFloatPt
    ,getPt 
    ,getRectCorners
    ,getUprightBoundRect
@@ -73,6 +74,13 @@ listToValue (x:xs) = x
 makeList::RectCornersFloat->[V2 CFloat]
 makeList (x,y,z,w) = [ P.fromPoint x, P.fromPoint y, P.fromPoint z, P.fromPoint w ]
 
+getFloatPt::Int32->RectCornersFloat->V2 CFloat
+getFloatPt num (x,y,z,w)
+    |   num==1 = P.fromPoint x
+    |   num==2 = P.fromPoint y
+    |   num==3 = P.fromPoint z
+    |   num==4 = P.fromPoint w
+    
 getPt::Int32->RectCornersFloat->V2 Int32
 getPt num (x,y,z,w)
     |   num==1 = makePoint2i $ P.fromPoint x

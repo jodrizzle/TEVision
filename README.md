@@ -13,14 +13,12 @@ Features:
  - Blurring prior to canny edge detection
  - Find contour points
  - Draw contour on original image
- - Find approximate corners of document and indicate on original
- - Find approximate edges of documents and indicate on original
- - apply perspective transform with arbitrary transformation matrix
+ - apply perspective transform to object
+ - 
  
 Notes:
  - image source files should be in the /data directory.  Call the program from the /src directory.
 
 TODO:
- - Create method to calculate transform matrix given 4 source and destination points
- - Threshold
+ - implement polygon approximation
  

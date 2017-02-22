@@ -18,6 +18,7 @@ import Foreign.C.Types
 import GHC.Int (Int32)
 import GHC.Word 
 import Linear
+import Math.LinearEquationSolver
 import OpenCV.Internal.C.Types
 import OpenCV.TypeLevel
 import System.Environment
@@ -32,21 +33,23 @@ showImage title img = CV.withWindow title $ \window -> do  --display image
                         CV.resizeWindow window 500 500
                         void $ CV.waitKey 100000
                         
-showDetectedObjects::Int->(V.Vector SA.Contour)->M.Mat (CV.S '[height, width]) channels depth->IO ()
-showDetectedObjects iter contours imgOrig
+showDetectedObjects::Int->(V.Vector SA.Contour)->M.Mat (CV.S '[height, width]) channels depth-> M.Mat ('CV.S '[ 'CV.D, 'CV.D]) ('CV.S 1) ('CV.S Word8)->IO ()
+showDetectedObjects iter contours imgOrig imgGS
     | (V.null contours)   == True = putStrLn "NO OBJECTS DETECTED!"
     | otherwise                   = do
+        let a  = orderPts $ getRectCorners $ findEnclosingRectangle $ SA.contourPoints $ contours V.! 0
         let dims = (CV.fromSize  (CV.rectSize uprightBounder)::(V2 Int32))
-        let croppedImg = (cropImg imgOrig (CV.fromPoint (CV.rectTopLeft uprightBounder)::(V2 Int32)) dims) 
-        showImage ("Object "++(show iter)) croppedImg
-        showDimensions dims iter
-        t_Matrix <- CV.newMatx33d 1.31678 0.116182 (-179.158) (-0.124742) 1.40184 0.0182986 0.000797832 0.000793051 0.643084
-      --  t_Matrix <- CV.newMatx33d 1.31678 (-0.124742) 0.000797832 0.116182  1.40184 0.000793051 (-179.158)  0.0182986 0.643084
-        let persT = CV.exceptError $ M.coerceMat (CV.toMat t_Matrix) :: M.Mat ('CV.S '[ 'CV.S 3, 'CV.S 3]) ('CV.S 1) ('CV.S Double) 
-        showImage ("perspective corrected") (perspectiveTransform imgOrig persT)
-        when (V.length contours > 1) $ showDetectedObjects (iter+1) (V.tail contours) imgOrig   
+        --let croppedImg = (cropImg imgOrig (CV.fromPoint (CV.rectTopLeft uprightBounder)::(V2 Int32)) dims) 
+        --showImage ("Object "++(show iter)) croppedImg
+        --showDimensions dims iter
+        let srcVec = V.fromList [getFloatPt 1 a, getFloatPt 2 a, getFloatPt 3 a, getFloatPt 4 a]
+        let dstVec = V.fromList [(V2 0 0),    (V2 (fromIntegral $ getIntXComp dims) 0),  (V2 0 (fromIntegral $ getIntYComp dims)) , (V2 (fromIntegral $ getIntXComp dims) (fromIntegral $ getIntYComp dims))]
+        let t_pers = CV.getPerspectiveTransform srcVec dstVec
+        let uprightImg = perspectiveTransform imgGS t_pers
+        showImage ("perspective corrected and cropped") (threshBinary $ cropImg uprightImg (V2 0 0) dims)
+        when (V.length contours > 1) $ showDetectedObjects (iter+1) (V.tail contours) imgOrig imgGS   
     where uprightBounder = getUprightBoundRect contours
-          
+        
 showObjectsWithCorners::Int->(V.Vector SA.Contour)->M.Mat (CV.S '[height, width]) channels depth->IO ()
 showObjectsWithCorners iter contours imgOrig
     | (V.null contours)   == True = putStrLn "NO OBJECTS DETECTED!"
