@@ -13,8 +13,10 @@ module Utilities (
    ,getXComp
    ,getYComp
    ,inContour 
+   ,makePoint2f
    ,makePoint2i
    ,orderPts
+   ,orderPts'
    ,transparent
    ,white
    ,black
@@ -41,7 +43,6 @@ import qualified OpenCV.ImgProc.StructuralAnalysis as SA
 import qualified Data.Vector as V
 
 import Filters
-import ModuleXOR
 
 type RectCornersFloat = (CV.Point2f,CV.Point2f,CV.Point2f,CV.Point2f)
 
@@ -56,20 +57,33 @@ red         = CV.toScalar (V4   0   0 255 255 :: V4 Double)
 orderPts::RectCornersFloat-> RectCornersFloat --TL,TR,BL,BR
 orderPts pts = (topLeft pts, topRight pts, bottomLeft pts, bottomRight pts) 
 
+orderPts'::V.Vector CV.Point2i->V.Vector CV.Point2i
+orderPts' pts = V.fromList [topLeft' pts, topRight' pts, bottomLeft' pts, bottomRight' pts]
+
 topLeft::RectCornersFloat->CV.Point2f
 topLeft     = P.toPoint . listToValue . take 1 . sortBy (compare `on` getXComp) . take 2 . sortBy (compare `on` getYComp) . makeList
-
 topRight::RectCornersFloat->CV.Point2f
 topRight    = P.toPoint . listToValue . drop 1 . sortBy (compare `on` getXComp) . take 2 . sortBy (compare `on` getYComp) . makeList
-
 bottomLeft::RectCornersFloat->CV.Point2f
 bottomLeft  = P.toPoint . listToValue . take 1 . sortBy (compare `on` getXComp) . drop 2 . sortBy (compare `on` getYComp) . makeList
-
 bottomRight::RectCornersFloat->CV.Point2f
 bottomRight = P.toPoint . listToValue . drop 1 . sortBy (compare `on` getXComp) . drop 2 . sortBy (compare `on` getYComp) . makeList
 
+topLeft'::V.Vector CV.Point2i->CV.Point2i
+topLeft'     = listToValue' . take 1 . sortBy (compare `on` (getIntXComp . P.fromPoint)) . take 2 . sortBy (compare `on` (getIntYComp . P.fromPoint)) . V.toList
+topRight'::V.Vector CV.Point2i->CV.Point2i
+topRight'    = listToValue' . drop 1 . sortBy (compare `on` (getIntXComp . P.fromPoint)) . take 2 . sortBy (compare `on` (getIntYComp . P.fromPoint)) . V.toList
+bottomLeft'::V.Vector CV.Point2i->CV.Point2i
+bottomLeft'  = listToValue' . take 1 . sortBy (compare `on` (getIntXComp . P.fromPoint)) . drop 2 . sortBy (compare `on` (getIntYComp . P.fromPoint)) . V.toList
+bottomRight'::V.Vector CV.Point2i->CV.Point2i
+bottomRight' = listToValue' . drop 1 . sortBy (compare `on` (getIntXComp . P.fromPoint)) . drop 2 . sortBy (compare `on` (getIntYComp . P.fromPoint)) . V.toList
+
+
 listToValue::[V2 CFloat]->V2 CFloat
 listToValue (x:xs) = x
+
+listToValue'::[CV.Point2i]->CV.Point2i
+listToValue' (x:xs) = x
 
 makeList::RectCornersFloat->[V2 CFloat]
 makeList (x,y,z,w) = [ P.fromPoint x, P.fromPoint y, P.fromPoint z, P.fromPoint w ]
@@ -81,22 +95,24 @@ getFloatPt num (x,y,z,w)
     |   num==3 = P.fromPoint z
     |   num==4 = P.fromPoint w
     
-getPt::Int32->RectCornersFloat->V2 Int32
-getPt num (x,y,z,w)
-    |   num==1 = makePoint2i $ P.fromPoint x
-    |   num==2 = makePoint2i $ P.fromPoint y
-    |   num==3 = makePoint2i $ P.fromPoint z
-    |   num==4 = makePoint2i $ P.fromPoint w
+getPt::Int->V.Vector P.Point2i->V2 Int32
+getPt num a = P.fromPoint $ a V.! (num-1)
 
 makePoint2i::(V2 CFloat)->V2 Int32
 makePoint2i (V2 x y) = V2 (round x) (round y)
+
+makePoint2f::V2 Int32->V2 CFloat
+makePoint2f (V2 x y) = V2 (fromIntegral x) (fromIntegral y)
 
 getXComp::V2 CFloat->CFloat
 getXComp (V2 x _) =  x 
 getYComp::V2 CFloat->CFloat
 getYComp (V2 _ y) =  y 
 
+getV2FromPoint a = P.fromPoint a
+getIntXComp::V2 Int32->Int32
 getIntXComp (V2 x _) = x
+getIntYComp::V2 Int32->Int32
 getIntYComp (V2 _ y) = y
 -- minAreaRect : Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 findEnclosingRectangle:: P.IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> CV.RotatedRect

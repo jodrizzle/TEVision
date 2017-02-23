@@ -47,12 +47,17 @@ main = do
       
       --detect and draw contours----------------------------------------------------------------------
         contours <- (getContours canniedImg)
+        let peri = CV.exceptError $ CV.arcLength (CV.contourPoints $ contours V.! 0) True
+        approxPolyContour <- CV.approxPolyDP (CV.contourPoints $ contours V.! 0) (0.02*peri) True
         imgMut <- CV.thaw imgOrig--make mutable matrix  
-        CV.drawContours (V.map SA.contourPoints contours) red (CV.OutlineContour CV.LineType_8 2) imgMut --action to mutate imgMut
+        --CV.drawContours (V.singleton approxPolyContour) red (CV.OutlineContour CV.LineType_8 2) imgMut --action to mutate imgMut
+        CV.drawContours (V.singleton approxPolyContour) red (CV.OutlineContour CV.LineType_8 2) imgMut --action to mutate imgMut
         contoured_img <- CV.freeze imgMut--make matrix immutable again
+        --putStrLn $ "Original points:\t"++show (CV.contourPoints $ contours V.! 0)
+        putStrLn $ "Simplified points:\t"++show approxPolyContour
         putStrLn $ "Number of outlines detected:\t" ++ (show $ V.length contours) --print length of vector of contours "how many contours detected?"
         showImage "Contours" contoured_img        
         --showImage "Edges (Gaussian blur)" canniedImg      
       --display results-------------------------------------------------------------------------------
-        showDetectedObjects (1) contours imgOrig formImg
+        showDetectedObjects (1)  (V.singleton (CV.Contour approxPolyContour (CV.contourChildren $ contours V.! 0))) imgOrig formImg
         --showObjectsWithCorners (1) contours imgOrig

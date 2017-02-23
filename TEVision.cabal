@@ -23,7 +23,6 @@ executable TEVision
                      , ImageIO
                      , Transforms   
                      , Utilities
-                     , ModuleXOR
                      
 
   build-depends:       base >= 4.7 && < 5

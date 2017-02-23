@@ -1,7 +1,7 @@
 module ImageIO(
     showImage
    ,showDetectedObjects
-   ,showObjectsWithCorners
+   --   ,showObjectsWithCorners
 )   where
     
 import qualified OpenCV as CV
@@ -38,14 +38,16 @@ showDetectedObjects iter contours imgOrig imgGS
     | (V.null contours)   == True = putStrLn "NO OBJECTS DETECTED!"
     | otherwise                   = do
         let contour = SA.contourPoints $ contours V.! 0
+        putStrLn $ "Points:\t\t"++show contour
         let a  = orderPts $ getRectCorners $ findEnclosingRectangle contour
         let dims = (CV.fromSize  (CV.rectSize uprightBounder)::(V2 Int32))
-        --let croppedImg = (cropImg imgOrig (CV.fromPoint (CV.rectTopLeft uprightBounder)::(V2 Int32)) dims) 
-        --showImage ("Object "++(show iter)) croppedImg
-        --showDimensions dims iter
-        let srcVec = V.fromList [getFloatPt 1 a, getFloatPt 2 a, getFloatPt 3 a, getFloatPt 4 a]
+        
+        let a' = orderPts' contour
+        --let dims' = P.fromPoint (a' V.! 3)
+        
+        let srcVec = V.fromList [getPt 1 a', getPt 2 a', getPt 3 a', getPt 4 a']
         let dstVec = V.fromList [(V2 0 0),    (V2 (fromIntegral $ getIntXComp dims) 0),  (V2 0 (fromIntegral $ getIntYComp dims)) , (V2 (fromIntegral $ getIntXComp dims) (fromIntegral $ getIntYComp dims))]
-        let t_pers = CV.getPerspectiveTransform srcVec dstVec
+        let t_pers = CV.getPerspectiveTransform (V.map (makePoint2f) srcVec) dstVec
         let uprightImg = perspectiveTransform imgGS t_pers
         let perimeter = CV.exceptError $ CV.arcLength contour True
         putStrLn $ "Perimeter of object "++show iter++":\t"++ show (round perimeter)
@@ -53,7 +55,7 @@ showDetectedObjects iter contours imgOrig imgGS
         when (V.length contours > 1) $ showDetectedObjects (iter+1) (V.tail contours) imgOrig imgGS   
     where uprightBounder = getUprightBoundRect contours
         
-showObjectsWithCorners::Int->(V.Vector SA.Contour)->M.Mat (CV.S '[height, width]) channels depth->IO ()
+{-showObjectsWithCorners::Int->(V.Vector SA.Contour)->M.Mat (CV.S '[height, width]) channels depth->IO ()
 showObjectsWithCorners iter contours imgOrig
     | (V.null contours)   == True = putStrLn "NO OBJECTS DETECTED!"
     | otherwise                   = do
@@ -70,7 +72,7 @@ showObjectsWithCorners iter contours imgOrig
         circled_img <- CV.freeze mutImg
         if (V.length contours>1) 
            then showObjectsWithCorners (iter+1) (V.tail contours) circled_img 
-           else showImage ("Corners of object "++show iter) circled_img
+           else showImage ("Corners of object "++show iter) circled_img-}
 
 showDimensions:: V2 Int32->Int-> IO ()
 showDimensions dims iter = do
