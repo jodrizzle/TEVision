@@ -20,7 +20,6 @@ executable TEVision
   default-language:    Haskell2010
   default-extensions:  ExplicitForAll , TypeFamilies , FlexibleContexts , AllowAmbiguousTypes, TypeOperators, DataKinds
   other-modules:       Filters
-                     , ImageIO
                      , Transforms   
                      , Utilities
                      

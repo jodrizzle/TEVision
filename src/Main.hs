@@ -3,13 +3,8 @@ module Main where
 import qualified Data.ByteString as B 
 import qualified OpenCV as CV
 import qualified OpenCV.Internal.Core.Types.Mat as M
-import qualified OpenCV.Internal.Core.Types.Point as P
-import qualified OpenCV.ImgProc.StructuralAnalysis as SA 
 import qualified Data.Vector as V
-import Control.Monad (void)
-import Control.Monad.Primitive
-import Data.Bool
-import Data.Int
+import Control.Monad (void,when)
 import Data.List
 import Data.Map
 import Data.Maybe    
@@ -18,13 +13,9 @@ import Foreign.C.Types
 import GHC.Int (Int32)
 import GHC.Word  
 import Linear
-import Math.LinearEquationSolver
 import System.Environment
-import OpenCV.Internal.C.Types
---import OpenCV.SayHello
 
 import Filters
-import ImageIO
 import Transforms
 import Utilities
 
@@ -50,14 +41,38 @@ main = do
         let peri = CV.exceptError $ CV.arcLength (CV.contourPoints $ contours V.! 0) True
         approxPolyContour <- CV.approxPolyDP (CV.contourPoints $ contours V.! 0) (0.02*peri) True
         imgMut <- CV.thaw imgOrig--make mutable matrix  
-        --CV.drawContours (V.singleton approxPolyContour) red (CV.OutlineContour CV.LineType_8 2) imgMut --action to mutate imgMut
         CV.drawContours (V.singleton approxPolyContour) red (CV.OutlineContour CV.LineType_8 2) imgMut --action to mutate imgMut
         contoured_img <- CV.freeze imgMut--make matrix immutable again
-        --putStrLn $ "Original points:\t"++show (CV.contourPoints $ contours V.! 0)
         putStrLn $ "Simplified points:\t"++show approxPolyContour
         putStrLn $ "Number of outlines detected:\t" ++ (show $ V.length contours) --print length of vector of contours "how many contours detected?"
-        showImage "Contours" contoured_img        
-        --showImage "Edges (Gaussian blur)" canniedImg      
+        showImage "Contours" contoured_img             
       --display results-------------------------------------------------------------------------------
         showDetectedObjects (1)  (V.singleton (CV.Contour approxPolyContour (CV.contourChildren $ contours V.! 0))) imgOrig formImg
-        --showObjectsWithCorners (1) contours imgOrig
+
+showImage::String-> M.Mat (CV.S '[height, width]) channels depth-> IO ()
+showImage title img = CV.withWindow title $ \window -> do  --display image
+                        CV.imshow window img
+                        CV.resizeWindow window 500 500
+                        void $ CV.waitKey 100000
+                        
+showDetectedObjects::Int->(V.Vector CV.Contour)->M.Mat (CV.S '[height, width]) channels depth-> M.Mat ('CV.S '[ 'CV.D, 'CV.D]) ('CV.S 1) ('CV.S Word8)->IO ()
+showDetectedObjects iter contours imgOrig imgGS
+    | (V.null contours)   == True = putStrLn "NO OBJECTS DETECTED!"
+    | otherwise                   = do
+        let contour = CV.contourPoints $ contours V.! 0
+        let a = orderPts contour
+        let dims = (CV.fromSize  (CV.rectSize uprightBounder)::(V2 Int32))
+        let srcVec = V.fromList [getPt 1 a, getPt 2 a, getPt 3 a, getPt 4 a]
+        let dstVec = V.fromList [(V2 0 0),    (V2 (fromIntegral $ getXComp dims) 0),  (V2 0 (fromIntegral $ getYComp dims)) , (V2 (fromIntegral $ getXComp dims) (fromIntegral $ getYComp dims))]
+        let t_pers = CV.getPerspectiveTransform (V.map (makePoint2f) srcVec) dstVec
+        let uprightImg = perspectiveTransform imgGS t_pers
+        let perimeter = CV.exceptError $ CV.arcLength contour True
+        putStrLn $ "Perimeter of object "++show iter++":\t"++ show (round perimeter)
+        showImage ("perspective corrected and cropped, perimeter is "++show (round perimeter)) (threshBinary $ cropImg uprightImg (V2 0 0) dims)
+        when (V.length contours > 1) $ showDetectedObjects (iter+1) (V.tail contours) imgOrig imgGS   
+    where uprightBounder = getUprightBoundRect contours
+        
+showDimensions:: V2 Int32->Int-> IO ()
+showDimensions dims iter = do
+    putStrLn ("Height of matrix "++(show iter)++" (y_max): "++show  ((getYComp dims)))
+    putStrLn ("Width of matrix  "++(show iter)++" (x_max): "++show  ((getXComp dims)))
