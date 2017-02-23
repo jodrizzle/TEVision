@@ -5,6 +5,7 @@ import qualified OpenCV as CV
 import qualified OpenCV.Internal.Core.Types.Mat as M
 import qualified Data.Vector as V
 import Control.Monad (void,when)
+import Data.Function
 import Data.List
 import Data.Map
 import Data.Maybe    
@@ -24,7 +25,6 @@ main = do
       --Parse arguments-------------------------------------------------------------------------------
         args<-getArgs
         let fname = args !! 0 --filename is first argument
-        let blurRegion = args !! 1 --blur kernel size is second argument
         
       --Read image------------------------------------------------------------------------------------
         imgOrig  <- CV.imdecode CV.ImreadUnchanged <$> B.readFile ("../data/"++fname)      
@@ -33,21 +33,21 @@ main = do
         showImage "Original" imgOrig
       --tighten matrix type constraints to work with canny and blur-----------------------------------
         let formImg = CV.exceptError $ M.coerceMat imgGS :: M.Mat ('CV.S '[ 'CV.D, 'CV.D]) ('CV.S 1) ('CV.S Word8)
-        let kernel = getKernel blurRegion
-        let canniedImg = cannyImg (gaussianBlurImg formImg kernel)
+        let canniedImg = cannyImg (gaussianBlurImg formImg 3)
       
       --detect and draw contours----------------------------------------------------------------------
         contours <- (getContours canniedImg)
-        let peri = CV.exceptError $ CV.arcLength (CV.contourPoints $ contours V.! 0) True
-        approxPolyContour <- CV.approxPolyDP (CV.contourPoints $ contours V.! 0) (0.02*peri) True
+        let simpleContours = V.map CV.contourPoints contours --contours without children, i.e. Vector of Vectors of Point2i
+        let areas = getAreas simpleContours
+        let largestIndex = findLargestContourIndex areas
+        let peri = CV.exceptError $ CV.arcLength (CV.contourPoints $ contours V.! largestIndex) True   
+        approxPolyContour <- CV.approxPolyDP (CV.contourPoints $ contours V.! largestIndex) (0.02*peri) True
         imgMut <- CV.thaw imgOrig--make mutable matrix  
-        CV.drawContours (V.singleton approxPolyContour) red (CV.OutlineContour CV.LineType_8 2) imgMut --action to mutate imgMut
+        CV.drawContours (V.map CV.contourPoints contours) red (CV.OutlineContour CV.LineType_8 2) imgMut --action to mutate imgMut
         contoured_img <- CV.freeze imgMut--make matrix immutable again
-        putStrLn $ "Simplified points:\t"++show approxPolyContour
         putStrLn $ "Number of outlines detected:\t" ++ (show $ V.length contours) --print length of vector of contours "how many contours detected?"
         showImage "Contours" contoured_img             
-      --display results-------------------------------------------------------------------------------
-        showDetectedObjects (1)  (V.singleton (CV.Contour approxPolyContour (CV.contourChildren $ contours V.! 0))) imgOrig formImg
+        showDetectedObjects (1) (V.singleton (CV.Contour approxPolyContour (CV.contourChildren $ contours V.! largestIndex)))  imgOrig formImg
 
 showImage::String-> M.Mat (CV.S '[height, width]) channels depth-> IO ()
 showImage title img = CV.withWindow title $ \window -> do  --display image
@@ -68,7 +68,8 @@ showDetectedObjects iter contours imgOrig imgGS
         let uprightImg = perspectiveTransform imgGS t_pers
         let perimeter = CV.exceptError $ CV.arcLength contour True
         putStrLn $ "Perimeter of object "++show iter++":\t"++ show (round perimeter)
-        showImage ("perspective corrected and cropped, perimeter is "++show (round perimeter)) (threshBinary $ cropImg uprightImg (V2 0 0) dims)
+        showImage "Largest detected object" (cropImg uprightImg (V2 0 0) dims)
+        showImage "Largest detected object" (threshBinary $ cropImg uprightImg (V2 0 0) dims)
         when (V.length contours > 1) $ showDetectedObjects (iter+1) (V.tail contours) imgOrig imgGS   
     where uprightBounder = getUprightBoundRect contours
         

@@ -7,6 +7,9 @@ module Utilities (
    ,getYComp
    ,makePoint2f
    ,orderPts
+   ,findLargestContourIndex
+   ,getAreas
+   ,contFloat
    ,transparent
    ,white
    ,black
@@ -73,3 +76,16 @@ getContours image = do
                     imageM <- CV.thaw image
                     contours_vector <- CV.findContours SA.ContourRetrievalExternal SA.ContourApproximationTC89KCOS imageM
                     pure contours_vector
+        
+findLargestContourIndex::V.Vector Double->Int
+findLargestContourIndex areas = snd . maximum $ zip (V.toList areas) [0..]
+
+getAreas::V.Vector (V.Vector CV.Point2i)->V.Vector Double
+getAreas conts
+    | V.length conts == 0 =  V.empty
+    | V.length conts == 1 =  V.singleton $ CV.exceptError $ CV.contourArea (contFloat (V.head conts)) CV.ContourAreaAbsoluteValue
+    | otherwise           = (V.singleton (CV.exceptError (CV.contourArea (contFloat (V.head conts)) CV.ContourAreaAbsoluteValue))) V.++ (getAreas (V.tail conts))
+
+contFloat::V.Vector CV.Point2i -> V.Vector CV.Point2f
+contFloat = V.map (CV.toPoint . makePoint2f . CV.fromPoint)                    
+                    
