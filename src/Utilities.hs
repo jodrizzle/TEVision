@@ -1,5 +1,6 @@
 module Utilities (  
     findEnclosingRectangle
+   ,approximateContours
    ,getContours
    ,getPt 
    ,getUprightBoundRect
@@ -12,6 +13,7 @@ module Utilities (
    ,findLargestContourIndex
    ,getAreas
    ,contFloat
+   ,isImgFile
    ,transparent
    ,white
    ,black
@@ -78,9 +80,23 @@ getContours image = do
                     imageM <- CV.thaw image
                     contours_vector <- CV.findContours SA.ContourRetrievalExternal SA.ContourApproximationTC89KCOS imageM
                     pure contours_vector
-        
+
+approximateContours::PrimMonad m =>V.Vector CV.Contour->m (V.Vector (V.Vector CV.Point2i)) 
+approximateContours conts
+    | V.length conts == 1 = do
+            cont <- CV.approxPolyDP (CV.contourPoints $ V.head conts) (0.1*peri) True
+            return (V.singleton cont)
+    | otherwise           = do
+            cont <- CV.approxPolyDP (CV.contourPoints $ V.head conts) (0.1*peri) True
+            remainder <- pure (V.tail conts) >>= approximateContours
+            let conc = (V.singleton cont) V.++ remainder
+            return conc
+    where peri = CV.exceptError $ CV.arcLength (CV.contourPoints (V.head conts)) True    
+          
 findLargestContourIndex::V.Vector Double->Int
-findLargestContourIndex areas = snd . maximum $ zip (V.toList areas) [0..]
+findLargestContourIndex areas 
+    | V.length areas == 0 = (-1)
+    | otherwise           = snd . maximum $ zip (V.toList areas) [0..]
 
 getAreas::V.Vector (V.Vector CV.Point2i)->V.Vector Double
 getAreas conts
@@ -97,3 +113,6 @@ isQuad pts = (V.length pts == 4)
 isLarge::V.Vector CV.Point2i->Bool
 isLarge pts = (CV.exceptError $ CV.arcLength pts True)>=300
   
+
+isImgFile::FilePath->Bool
+isImgFile nm = (reverse $ take 3 $ reverse nm) `elem` ["jpg","bmp","peg","png", "gif"]
