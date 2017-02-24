@@ -83,8 +83,8 @@ saveDetectedObjects iter contours imgOrig imgGS fname
         let dstVec = V.fromList [(V2 0 0),    (V2 (fromIntegral $ getXComp dims) 0),  (V2 0 (fromIntegral $ getYComp dims)) , (V2 (fromIntegral $ getXComp dims) (fromIntegral $ getYComp dims))]
         let t_pers = CV.getPerspectiveTransform (V.map (makePoint2f) srcVec) dstVec
         let uprightImg = perspectiveTransform imgGS t_pers
-        B.writeFile ("../data/Output/"++fnameNoExt++"_"++show iter++".bmp") $ CV.exceptError $ CV.imencode CV.OutputBmp $ threshBinary $ cropImg uprightImg (V2 0 0) dims
-        putStrLn $ "Wrote to file: ../data/Output/"++fnameNoExt++"_"++show iter++".bmp"      
+        B.writeFile ("../data/Output/"++fnameNoExt++"_"++show iter++".tiff") $ CV.exceptError $ CV.imencode CV.OutputTiff $ threshBinary $ cropImg uprightImg (V2 0 0) dims
+        putStrLn $ "Wrote to file: ../data/Output/"++fnameNoExt++"_"++show iter++".tiff"      
         when (V.length contours > 1) $ saveDetectedObjects (iter+1) (V.tail contours) imgOrig imgGS fname
     where uprightBounder = getUprightBoundRect contours
           peri = CV.exceptError $ CV.arcLength (contours V.! 0) True
