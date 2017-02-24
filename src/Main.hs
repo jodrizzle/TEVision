@@ -16,6 +16,7 @@ import GHC.Int (Int32)
 import GHC.Word  
 import Linear
 import System.Environment
+import System.Exit
 
 import Filters
 import Transforms
@@ -30,11 +31,10 @@ main = do
       --Read image------------------------------------------------------------------------------------
         imgOrig  <- CV.imdecode CV.ImreadUnchanged <$> B.readFile ("../data/"++fname)      
         imgGS    <- CV.imdecode CV.ImreadGrayscale <$> B.readFile ("../data/"++fname)
-        
         showImage "Original" imgOrig
       --tighten matrix type constraints to work with canny and blur-----------------------------------
         let formImg = CV.exceptError $ M.coerceMat imgGS :: M.Mat ('CV.S '[ 'CV.D, 'CV.D]) ('CV.S 1) ('CV.S Word8)
-        let canniedImg = cannyImg (gaussianBlurImg formImg 5)
+        let canniedImg = cannyImg (gaussianBlurImg formImg 3    )
       
       --detect and draw contours----------------------------------------------------------------------
         contours <- (getContours canniedImg)
@@ -47,7 +47,7 @@ main = do
         CV.drawContours (quadrilaterals) red (CV.OutlineContour CV.LineType_8 10) imgMut --action to mutate imgMut
         contoured_img <- CV.freeze imgMut--make matrix immutable again
         showImage "Contours" contoured_img                 
-        showDetectedObjects (1) (V.singleton (quadrilaterals V.! largestIndex))  imgOrig formImg
+        showDetectedObjects (1) (V.singleton (quadrilaterals V.! largestIndex))  imgOrig formImg fname
         
 approximateContours::PrimMonad m =>V.Vector CV.Contour->m (V.Vector (V.Vector CV.Point2i)) --(>>=) :: (Monad m) => m a -> (a -> m b) -> m b  
 approximateContours conts
@@ -68,8 +68,8 @@ showImage title img = CV.withWindow title $ \window -> do  --display image
                         CV.resizeWindow window 500 500
                         void $ CV.waitKey 100000
                         
-showDetectedObjects::Int->(V.Vector (V.Vector CV.Point2i))->M.Mat (CV.S '[height, width]) channels depth-> M.Mat ('CV.S '[ 'CV.D, 'CV.D]) ('CV.S 1) ('CV.S Word8)->IO ()
-showDetectedObjects iter contours imgOrig imgGS
+showDetectedObjects::Int->(V.Vector (V.Vector CV.Point2i))->M.Mat (CV.S '[height, width]) channels depth-> M.Mat ('CV.S '[ 'CV.D, 'CV.D]) ('CV.S 1) ('CV.S Word8)->String->IO ()
+showDetectedObjects iter contours imgOrig imgGS fname
     | (V.null contours)   == True = putStrLn "NO OBJECTS DETECTED!"
     | otherwise                   = do
         let contour = contours V.! 0
@@ -80,12 +80,15 @@ showDetectedObjects iter contours imgOrig imgGS
         let t_pers = CV.getPerspectiveTransform (V.map (makePoint2f) srcVec) dstVec
         let uprightImg = perspectiveTransform imgGS t_pers
         putStrLn $ "Perimeter:\t"++show peri
+        B.writeFile ("../data/Output/"++show fnameNoExt++".bmp") $ CV.exceptError $ CV.imencode CV.OutputBmp $ threshBinary $ cropImg uprightImg (V2 0 0) dims
+        putStrLn $ "Wrote to file: ../data/Output/"++fnameNoExt++".bmp"      
         showImage "Largest detected object" (cropImg uprightImg (V2 0 0) dims)
         showImage "Largest detected object" (threshBinary $ cropImg uprightImg (V2 0 0) dims)
-        when (V.length contours > 1) $ showDetectedObjects (iter+1) (V.tail contours) imgOrig imgGS   
+        when (V.length contours > 1) $ showDetectedObjects (iter+1) (V.tail contours) imgOrig imgGS fname
+        exitWith ExitSuccess  
     where uprightBounder = getUprightBoundRect contours
           peri = CV.exceptError $ CV.arcLength (contours V.! 0) True
-        
+          fnameNoExt = reverse $ drop 4 $ reverse fname
 showDimensions:: V2 Int32->Int-> IO ()
 showDimensions dims iter = do
     putStrLn ("Height of matrix "++(show iter)++" (y_max): "++show  ((getYComp dims)))
