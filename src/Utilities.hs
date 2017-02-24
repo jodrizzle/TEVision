@@ -5,6 +5,8 @@ module Utilities (
    ,getUprightBoundRect
    ,getXComp
    ,getYComp
+   ,isLarge
+   ,isQuad
    ,makePoint2f
    ,orderPts
    ,findLargestContourIndex
@@ -68,8 +70,8 @@ getYComp (V2 _ y) = y
 findEnclosingRectangle:: P.IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> CV.RotatedRect
 findEnclosingRectangle = SA.minAreaRect
     
-getUprightBoundRect::   (V.Vector SA.Contour)-> CV.Rect2i 
-getUprightBoundRect contours= CV.rotatedRectBoundingRect $ (findEnclosingRectangle (SA.contourPoints $ contours V.! 0))  --rect2i  
+getUprightBoundRect::   (V.Vector (V.Vector P.Point2i))-> CV.Rect2i 
+getUprightBoundRect contours= CV.rotatedRectBoundingRect $ (findEnclosingRectangle (contours V.! 0))  --rect2i  
 
 getContours :: PrimMonad m => M.Mat ('CV.S '[h0, w0]) ('CV.S 1) ('CV.S Word8) -> m (V.Vector SA.Contour)
 getContours image = do
@@ -88,4 +90,10 @@ getAreas conts
 
 contFloat::V.Vector CV.Point2i -> V.Vector CV.Point2f
 contFloat = V.map (CV.toPoint . makePoint2f . CV.fromPoint)                    
-                    
+  
+isQuad::V.Vector CV.Point2i->Bool
+isQuad pts = (V.length pts == 4)
+
+isLarge::V.Vector CV.Point2i->Bool
+isLarge pts = (CV.exceptError $ CV.arcLength pts True)>=300
+  

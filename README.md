@@ -19,4 +19,3 @@ Features:
 Notes:
  - image source files should be in the /data directory.  Call the program from the /src directory.
  - the program assumes there's only one document in an input image.  It will reliably find the largest document
- 
