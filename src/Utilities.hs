@@ -78,7 +78,7 @@ getUprightBoundRect contours= CV.rotatedRectBoundingRect $ (findEnclosingRectang
 getContours :: PrimMonad m => M.Mat ('CV.S '[h0, w0]) ('CV.S 1) ('CV.S Word8) -> m (V.Vector SA.Contour)
 getContours image = do
                     imageM <- CV.thaw image
-                    contours_vector <- CV.findContours SA.ContourRetrievalExternal SA.ContourApproximationTC89KCOS imageM
+                    contours_vector <- CV.findContours SA.ContourRetrievalList SA.ContourApproximationSimple imageM
                     pure contours_vector
 
 approximateContours::PrimMonad m =>V.Vector CV.Contour->m (V.Vector (V.Vector CV.Point2i)) 
@@ -111,8 +111,8 @@ isQuad::V.Vector CV.Point2i->Bool
 isQuad pts = (V.length pts == 4)
 
 isLarge::V.Vector CV.Point2i->Bool
-isLarge pts = (CV.exceptError $ CV.arcLength pts True)>=300
+isLarge pts = (CV.exceptError $ CV.arcLength pts True)>=1500
   
 
 isImgFile::FilePath->Bool
-isImgFile nm = (reverse $ take 3 $ reverse nm) `elem` ["jpg","bmp","peg","png", "gif"]
+isImgFile nm = (reverse $ take 3 $ reverse nm) `elem` ["jpg","bmp","peg","png", "gif","tif","iff"]

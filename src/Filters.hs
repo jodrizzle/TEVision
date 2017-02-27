@@ -13,7 +13,7 @@ import GHC.Word
 import Linear.V2   
 
 cannyImg::M.Mat (CV.S '[h, w]) channels (CV.S Word8)->(M.Mat (CV.S '[h, w]) (CV.S 1) (CV.S Word8))  
-cannyImg img = CV.exceptError $ CV.canny 25 200 Nothing CV.CannyNormL2 img
+cannyImg img = CV.exceptError $ CV.canny 25 200 Nothing CV.CannyNormL1 img
 
 gaussianBlurImg:: (depth `CV.In` '[Word8, Word16, Float, Double], channels `CV.In` '[1, 3, 4])  => (M.Mat shape ('CV.S channels) ('CV.S depth))->Int32-> M.Mat shape ('CV.S channels) ('CV.S depth)
 gaussianBlurImg imgO size = CV.exceptError $ CV.gaussianBlur (V2 size size ::V2 Int32) 0 0 imgO 
