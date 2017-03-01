@@ -6,9 +6,7 @@ module Filters(
    ,enhanceEdges
    ,dilateImg
    ,erodeImg    
-   ,openingImg
-   ,closingImg
-   ,morphImg
+   ,morphImg   
 )   where
     
 import OpenCV
@@ -17,9 +15,10 @@ import Data.Proxy
 import GHC.Int (Int16,Int32)
 import GHC.Word  
 import Linear.V2  
-import System.IO.Unsafe ( unsafePerformIO )
 
 import Utilities
+
+type StructureImg = Mat (ShapeT [20, 20]) (S 1) (S Word8)
 
 cannyImg::Mat (S [h, w]) channels (S Word8)->(Mat (S [h, w]) (S 1) (S Word8))  
 cannyImg img = exceptError $ canny 25 200 Nothing CannyNormL1 img
@@ -45,14 +44,24 @@ erodeImg rough img = exceptError $ erode img Nothing (Nothing::Maybe Point2i) ro
 dilateImg:: (depth `In` [Word8, Word16, Int16, Float, Double])=> Int->Mat shape channels (S depth)->Mat shape channels (S depth)
 dilateImg rough img = exceptError $ dilate img Nothing (Nothing::Maybe Point2i) rough BorderReplicate
 
-openingImg:: (depth `In` [Word8, Word16, Int16, Float, Double])=> Mat shape channels (S depth)->Mat shape channels (S depth)
-openingImg = (dilateImg 5) . (erodeImg 5)
-
-closingImg:: (depth `In` [Word8, Word16, Int16, Float, Double])=> Mat shape channels (S depth)->Mat shape channels (S depth)
-closingImg = (erodeImg 5) . (dilateImg 5)
-
-morphImg:: (depth `In` [Word8, Word16, Int16, Float, Double]) => Mat shape channels (S depth)->MorphOperation->Int->IO (Mat shape channels (S depth))
-morphImg img op rep = do
+morphImg:: (depth `In` [Word8, Word16, Int16, Float, Double]) => MorphOperation->Int->Mat shape channels (S depth)->IO (Mat shape channels (S depth))
+morphImg op rep img = do
     kern <- newMatx33d (-1) (-1) (-1) (-1) (9) (-1) (-1) (-1) (-1)
     let kernelMat = exceptError $ coerceMat (toMat kern)::Mat D D D --(S [ S 3, S 3]) (S 1) (S Double) 
-    return (exceptError $ morphologyEx img op kernelMat (Nothing::Maybe Point2i) rep BorderReplicate)
+    let kernelCross = exceptError $ coerceMat morphCrossImg::Mat D D D
+    return (exceptError $ morphologyEx img op kernelCross (Nothing::Maybe Point2i) rep BorderReplicate)
+    
+getStructElem::MorphShape->StructureImg
+getStructElem shape = exceptError $ do
+    mat <- getStructuringElement shape (Proxy :: Proxy 20) (Proxy :: Proxy 20)
+    img <- matConvertTo (Just 255) Nothing mat
+    bitwiseNot img
+    
+morphRectImg :: StructureImg
+morphRectImg = getStructElem MorphRect
+
+morphEllipseImg :: StructureImg
+morphEllipseImg = getStructElem MorphEllipse
+
+morphCrossImg :: StructureImg
+morphCrossImg = getStructElem $ MorphCross $ toPoint (pure (-1) :: V2 Int32)

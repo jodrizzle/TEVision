@@ -7,7 +7,7 @@ module Utilities (
    ,getUprightBoundRect
    ,getXComp
    ,getYComp
-   ,isLarge
+   ,isLong
    ,isQuad
    ,makePoint2f
    ,orderPts
@@ -15,6 +15,8 @@ module Utilities (
    ,getAreas
    ,contFloat
    ,isImgFile
+   ,printSideLengths
+   ,isSimplePolygon
    ,transparent
    ,white
    ,black
@@ -31,36 +33,32 @@ import Foreign.C.Types
 import GHC.Int (Int32)
 import GHC.Word 
 import Linear
-import OpenCV.Internal.C.Types
 import System.Environment 
-import qualified OpenCV as CV
-import qualified OpenCV.Internal.Core.Types.Mat as M
-import qualified OpenCV.Core.Types.Point as P
-import qualified OpenCV.ImgProc.StructuralAnalysis as SA 
+import OpenCV
 import qualified Data.Vector as V
 
-transparent, white, black, blue, green, red   :: CV.Scalar
-transparent = CV.toScalar (V4 255 255 255   0 :: V4 Double)
-white       = CV.toScalar (V4 255 255 255 255 :: V4 Double)
-black       = CV.toScalar (V4   0   0   0 255 :: V4 Double)
-blue        = CV.toScalar (V4 255   0   0 255 :: V4 Double)
-green       = CV.toScalar (V4   0 255   0 255 :: V4 Double)
-red         = CV.toScalar (V4   0   0 255 255 :: V4 Double)
+transparent, white, black, blue, green, red   :: Scalar
+transparent = toScalar (V4 255 255 255   0 :: V4 Double)
+white       = toScalar (V4 255 255 255 255 :: V4 Double)
+black       = toScalar (V4   0   0   0 255 :: V4 Double)
+blue        = toScalar (V4 255   0   0 255 :: V4 Double)
+green       = toScalar (V4   0 255   0 255 :: V4 Double)
+red         = toScalar (V4   0   0 255 255 :: V4 Double)
 
-orderPts::V.Vector CV.Point2i->V.Vector CV.Point2i
+orderPts::V.Vector Point2i->V.Vector Point2i
 orderPts pts = V.fromList [topLeft pts, topRight pts, bottomLeft pts, bottomRight pts]
 
-topLeft::V.Vector CV.Point2i->CV.Point2i
-topLeft     = head . take 1 . sortBy (compare `on` (getXComp . P.fromPoint)) . take 2 . sortBy (compare `on` (getYComp . P.fromPoint)) . V.toList
-topRight::V.Vector CV.Point2i->CV.Point2i
-topRight    = head . drop 1 . sortBy (compare `on` (getXComp . P.fromPoint)) . take 2 . sortBy (compare `on` (getYComp . P.fromPoint)) . V.toList
-bottomLeft::V.Vector CV.Point2i->CV.Point2i
-bottomLeft  = head . take 1 . sortBy (compare `on` (getXComp . P.fromPoint)) . drop 2 . sortBy (compare `on` (getYComp . P.fromPoint)) . V.toList
-bottomRight::V.Vector CV.Point2i->CV.Point2i
-bottomRight = head . drop 1 . sortBy (compare `on` (getXComp . P.fromPoint)) . drop 2 . sortBy (compare `on` (getYComp . P.fromPoint)) . V.toList
+topLeft::V.Vector Point2i->Point2i
+topLeft     = head . take 1 . sortBy (compare `on` (getXComp . fromPoint)) . take 2 . sortBy (compare `on` (getYComp . fromPoint)) . V.toList
+topRight::V.Vector Point2i->Point2i
+topRight    = head . drop 1 . sortBy (compare `on` (getXComp . fromPoint)) . take 2 . sortBy (compare `on` (getYComp . fromPoint)) . V.toList
+bottomLeft::V.Vector Point2i->Point2i
+bottomLeft  = head . take 1 . sortBy (compare `on` (getXComp . fromPoint)) . drop 2 . sortBy (compare `on` (getYComp . fromPoint)) . V.toList
+bottomRight::V.Vector Point2i->Point2i
+bottomRight = head . drop 1 . sortBy (compare `on` (getXComp . fromPoint)) . drop 2 . sortBy (compare `on` (getYComp . fromPoint)) . V.toList
 
-getPt::Int->V.Vector P.Point2i->V2 Int32
-getPt num a = P.fromPoint $ a V.! (num-1)
+getPt::Int->V.Vector Point2i->V2 Int32
+getPt num a = fromPoint $ a V.! (num-1)
 
 makePoint2f::V2 Int32->V2 CFloat
 makePoint2f (V2 x y) = V2 (fromIntegral x) (fromIntegral y)
@@ -70,37 +68,37 @@ getXComp (V2 x _) = x
 getYComp::V2 Int32->Int32
 getYComp (V2 _ y) = y
 
-findEnclosingRectangle:: P.IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> CV.RotatedRect
-findEnclosingRectangle = SA.minAreaRect
+findEnclosingRectangle:: IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> RotatedRect
+findEnclosingRectangle = minAreaRect
     
-getUprightBoundRect::   V.Vector P.Point2i-> CV.Rect2i 
-getUprightBoundRect contour= CV.rotatedRectBoundingRect $ (findEnclosingRectangle contour)  --rect2i  
+getUprightBoundRect::   V.Vector Point2i-> Rect2i 
+getUprightBoundRect contour= rotatedRectBoundingRect $ (findEnclosingRectangle contour)  --rect2i  
 
-getContours :: PrimMonad m => M.Mat (CV.S [h0, w0]) (CV.S 1) (CV.S Word8) -> m (V.Vector SA.Contour)
+getContours :: PrimMonad m => Mat (S [h0, w0]) (S 1) (S Word8) -> m (V.Vector Contour)
 getContours image = do
-                    imageM <- CV.thaw image
-                    contours_vector <- CV.findContours SA.ContourRetrievalExternal SA.ContourApproximationSimple imageM
+                    imageM <- thaw image
+                    contours_vector <- findContours ContourRetrievalExternal ContourApproximationSimple imageM
                     pure contours_vector
 
-approximateContours::PrimMonad m =>V.Vector CV.Contour->m (V.Vector (V.Vector CV.Point2i)) 
+approximateContours::PrimMonad m =>V.Vector Contour->m (V.Vector (V.Vector Point2i)) 
 approximateContours conts
     | V.length conts == 1 = do
-            cont <- CV.approxPolyDP (CV.contourPoints $ V.head conts) (0.1*peri) True
+            cont <- approxPolyDP (contourPoints $ V.head conts) (0.1*peri) True
             return (V.singleton cont)
     | otherwise           = do
-            cont <- CV.approxPolyDP (CV.contourPoints $ V.head conts) (0.1*peri) True
+            cont <- approxPolyDP (contourPoints $ V.head conts) (0.1*peri) True
             remainder <- pure (V.tail conts) >>= approximateContours
             let conc = (V.singleton cont) V.++ remainder
             return conc
-    where peri = CV.exceptError $ CV.arcLength (CV.contourPoints (V.head conts)) True    
+    where peri = exceptError $ arcLength (contourPoints (V.head conts)) True    
           
-rawContours::PrimMonad m =>V.Vector CV.Contour->m (V.Vector (V.Vector CV.Point2i)) 
+rawContours::PrimMonad m =>V.Vector Contour->m (V.Vector (V.Vector Point2i)) 
 rawContours conts
     | V.length conts == 1 = do
-            let cont = (CV.contourPoints $ V.head conts)
+            let cont = (contourPoints $ V.head conts)
             return (V.singleton cont)
     | otherwise           = do
-            let cont = (CV.contourPoints $ V.head conts)
+            let cont = (contourPoints $ V.head conts)
             remainder <- pure (V.tail conts) >>= rawContours
             let conc = (V.singleton cont) V.++ remainder
             return conc       
@@ -110,21 +108,46 @@ findLargestContourIndex areas
     | V.length areas == 0 = (-1)
     | otherwise           = snd . maximum $ zip (V.toList areas) [0..]
 
-getAreas::V.Vector (V.Vector CV.Point2i)->V.Vector Double
+getAreas::V.Vector (V.Vector Point2i)->V.Vector Double
 getAreas conts
     | V.length conts == 0 =  V.empty
-    | V.length conts == 1 =  V.singleton $ CV.exceptError $ CV.contourArea (contFloat (V.head conts)) CV.ContourAreaAbsoluteValue
-    | otherwise           = (V.singleton (CV.exceptError (CV.contourArea (contFloat (V.head conts)) CV.ContourAreaAbsoluteValue))) V.++ (getAreas (V.tail conts))
+    | V.length conts == 1 =  V.singleton $ exceptError $ contourArea (contFloat (V.head conts)) ContourAreaAbsoluteValue
+    | otherwise           = (V.singleton (exceptError (contourArea (contFloat (V.head conts)) ContourAreaAbsoluteValue))) V.++ (getAreas (V.tail conts))
 
-contFloat::V.Vector CV.Point2i -> V.Vector CV.Point2f
-contFloat = V.map (CV.toPoint . makePoint2f . CV.fromPoint)                    
+contFloat::V.Vector Point2i -> V.Vector Point2f
+contFloat = V.map (toPoint . makePoint2f . fromPoint)                    
   
-isQuad::V.Vector CV.Point2i->Bool
+isQuad::V.Vector Point2i->Bool
 isQuad pts = (V.length pts == 4)
 
-isLarge::V.Vector CV.Point2i->Bool
-isLarge pts = (CV.exceptError $ CV.arcLength pts True)>=1500
-  
+isLong::V.Vector Point2i->Bool
+isLong pts = (exceptError $ arcLength pts True)>=1500
 
 isImgFile::FilePath->Bool
 isImgFile nm = (reverse $ take 3 $ reverse nm) `elem` ["jpg","bmp","peg","png", "gif","tif","iff"]
+
+
+printSideLengths::((V.Vector Point2i),Double)->IO () --check that shortest side is at least half of second shortest side
+printSideLengths (v,area) = do
+    putStrLn $ "Area:                :\t"++show area
+    printSides v
+    
+isSimplePolygon::V.Vector Point2i->Bool
+isSimplePolygon v = (fst $ shortestSides v)>=(0.5*(snd $ shortestSides v))  
+
+shortestSides::V.Vector Point2i->(Double,Double) --shortest, second shortest
+shortestSides v = (head lengths,head $ tail lengths)
+    where lengths = sort [    
+             exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 1)]) False  
+            ,exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 2)]) False
+            ,exceptError $ arcLength (V.fromList [(v V.! 3) , (v V.! 1)]) False
+            ,exceptError $ arcLength (V.fromList [(v V.! 3) , (v V.! 2)]) False    ]
+
+printSides::(V.Vector Point2i)->IO ()--
+printSides v = do
+        rs <-   V.sequence $ V.fromList [    
+             putStrLn $ show $ exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 1)]) False  
+            ,putStrLn $ show $ exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 2)]) False
+            ,putStrLn $ show $ exceptError $ arcLength (V.fromList [(v V.! 3) , (v V.! 1)]) False
+            ,putStrLn $ show $ exceptError $ arcLength (V.fromList [(v V.! 3) , (v V.! 2)]) False    ]
+        putStrLn $ show rs
