@@ -1,26 +1,22 @@
 Author:Johan Jansen van Vuuren
 
-Version:0.1
+Version:1.0
 
-Date:21/02/2016
+Date:01/03/2016
 
 Usage:
- - ./TEVision
-
+ - Build:  stack init, stack setup ,stack build
+ - Run  :  stack exec TEVision                      (Process all image files in data/)
+ - Run  :  stack exec TEVision imagepath.extension  (Process specified image file in data/)
+ 
 Features:
- - Cycles through all image files in /data
- - Load images (grayscale,color)
+ - Cycles through image files in /data
  - Canny edge detection
- - Blurring prior to canny edge detection
- - Find contour points
- - Draw contours on original image
- - Apply perspective transform to largest object found
- - Threshold
+ - Apply perspective transform to detected documents
  - Write output to files
  
 Notes:
- - image source files should be in the /data directory.  Call the program from the /bin directory.
- - the program assumes there's only one document in an input image.  It will reliably find the largest document
+ - image source files should be in the /data directory.  Call the program from the /src directory.
  - the output directory is /data/Output 
  
 TODO:
