@@ -12,7 +12,6 @@ category:            Image Processing
 build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  README.md
-
 executable TEVision
   hs-source-dirs:      src
                      , data  
@@ -22,8 +21,19 @@ executable TEVision
   other-modules:       Filters
                      , Transforms   
                      , Utilities
-                     
-
+  default-extensions:  BangPatterns
+                       DataKinds
+                       FlexibleContexts
+                       FlexibleInstances
+                       LambdaCase
+                       OverloadedStrings
+                       PackageImports
+                       PolyKinds
+                       RankNTypes
+                       ScopedTypeVariables
+                       TupleSections
+                       TypeFamilies
+                       TypeOperators
   build-depends:       base >= 4.7 && < 5
                      , opencv <= 3.1  
                      , bytestring
@@ -33,5 +43,7 @@ executable TEVision
                      , primitive
                      , vector
                      , containers
-                     , linearEqSolver>=1.3
                      , directory
+                     , type-level-numbers
+                     , text
+                     , transformers

@@ -1,6 +1,7 @@
 module Utilities (  
     findEnclosingRectangle
    ,approximateContours
+   ,rawContours
    ,getContours
    ,getPt 
    ,getUprightBoundRect
@@ -72,13 +73,13 @@ getYComp (V2 _ y) = y
 findEnclosingRectangle:: P.IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> CV.RotatedRect
 findEnclosingRectangle = SA.minAreaRect
     
-getUprightBoundRect::   (V.Vector (V.Vector P.Point2i))-> CV.Rect2i 
-getUprightBoundRect contours= CV.rotatedRectBoundingRect $ (findEnclosingRectangle (contours V.! 0))  --rect2i  
+getUprightBoundRect::   V.Vector P.Point2i-> CV.Rect2i 
+getUprightBoundRect contour= CV.rotatedRectBoundingRect $ (findEnclosingRectangle contour)  --rect2i  
 
-getContours :: PrimMonad m => M.Mat ('CV.S '[h0, w0]) ('CV.S 1) ('CV.S Word8) -> m (V.Vector SA.Contour)
+getContours :: PrimMonad m => M.Mat (CV.S [h0, w0]) (CV.S 1) (CV.S Word8) -> m (V.Vector SA.Contour)
 getContours image = do
                     imageM <- CV.thaw image
-                    contours_vector <- CV.findContours SA.ContourRetrievalList SA.ContourApproximationSimple imageM
+                    contours_vector <- CV.findContours SA.ContourRetrievalExternal SA.ContourApproximationSimple imageM
                     pure contours_vector
 
 approximateContours::PrimMonad m =>V.Vector CV.Contour->m (V.Vector (V.Vector CV.Point2i)) 
@@ -92,6 +93,17 @@ approximateContours conts
             let conc = (V.singleton cont) V.++ remainder
             return conc
     where peri = CV.exceptError $ CV.arcLength (CV.contourPoints (V.head conts)) True    
+          
+rawContours::PrimMonad m =>V.Vector CV.Contour->m (V.Vector (V.Vector CV.Point2i)) 
+rawContours conts
+    | V.length conts == 1 = do
+            let cont = (CV.contourPoints $ V.head conts)
+            return (V.singleton cont)
+    | otherwise           = do
+            let cont = (CV.contourPoints $ V.head conts)
+            remainder <- pure (V.tail conts) >>= rawContours
+            let conc = (V.singleton cont) V.++ remainder
+            return conc       
           
 findLargestContourIndex::V.Vector Double->Int
 findLargestContourIndex areas 
