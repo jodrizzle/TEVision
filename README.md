@@ -5,11 +5,13 @@ Version:1.0
 Date:01/03/2016
 
 Usage:
- Using Stack:
+ 
+Using Stack:
  - Build:  stack init, stack setup ,stack build
  - Run  :  stack exec TEVision                      (Process all image files in data/)
  - Run  :  stack exec TEVision imagepath.extension  (Process specified image file in data/)
- Using binary:
+ 
+Using binary:
  - Run  :  ./DocScanner
  - Run  :  ./DocScanner imagepath.extension 
  
