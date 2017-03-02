@@ -14,6 +14,9 @@ Features:
  - Canny edge detection
  - Apply perspective transform to detected documents
  - Write output to files
+
+Dependencies:
+ - OpenCV installed on system
  
 Notes:
  - image source files should be in the /data directory.  Call the program from the /src directory.
@@ -21,4 +24,6 @@ Notes:
  
 TODO:
  - performance tuning
+ - concurrency
+ - shrink images before processing for speedup
  

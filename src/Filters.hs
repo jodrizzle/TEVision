@@ -48,7 +48,7 @@ morphImg:: (depth `In` [Word8, Word16, Int16, Float, Double]) => MorphOperation-
 morphImg op rep img = do
     kern <- newMatx33d (-1) (-1) (-1) (-1) (9) (-1) (-1) (-1) (-1)
     let kernelMat = exceptError $ coerceMat (toMat kern)::Mat D D D --(S [ S 3, S 3]) (S 1) (S Double) 
-    let kernelCross = exceptError $ coerceMat morphCrossImg::Mat D D D
+    let kernelCross = exceptError $ coerceMat (getStructElem $ MorphCross $ toPoint (pure (-1) :: V2 Int32))::Mat D D D
     return (exceptError $ morphologyEx img op kernelCross (Nothing::Maybe Point2i) rep BorderReplicate)
     
 getStructElem::MorphShape->StructureImg
@@ -56,12 +56,3 @@ getStructElem shape = exceptError $ do
     mat <- getStructuringElement shape (Proxy :: Proxy 20) (Proxy :: Proxy 20)
     img <- matConvertTo (Just 255) Nothing mat
     bitwiseNot img
-    
-morphRectImg :: StructureImg
-morphRectImg = getStructElem MorphRect
-
-morphEllipseImg :: StructureImg
-morphEllipseImg = getStructElem MorphEllipse
-
-morphCrossImg :: StructureImg
-morphCrossImg = getStructElem $ MorphCross $ toPoint (pure (-1) :: V2 Int32)

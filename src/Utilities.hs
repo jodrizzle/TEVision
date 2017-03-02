@@ -1,12 +1,12 @@
 module Utilities (  
-    findEnclosingRectangle
-   ,approximateContours
+    approximateContours
    ,rawContours
    ,getContours
    ,getPt 
    ,getUprightBoundRect
    ,getXComp
    ,getYComp
+   ,sideLengths
    ,isLong
    ,isQuad
    ,makePoint2f
@@ -15,7 +15,6 @@ module Utilities (
    ,getAreas
    ,contFloat
    ,isImgFile
-   ,printSideLengths
    ,isSimplePolygon
    ,transparent
    ,white
@@ -58,7 +57,7 @@ bottomRight::V.Vector Point2i->Point2i
 bottomRight = head . drop 1 . sortBy (compare `on` (getXComp . fromPoint)) . drop 2 . sortBy (compare `on` (getYComp . fromPoint)) . V.toList
 
 getPt::Int->V.Vector Point2i->V2 Int32
-getPt num a = fromPoint $ a V.! (num-1)
+getPt num a = fromPoint $ a V.! num
 
 makePoint2f::V2 Int32->V2 CFloat
 makePoint2f (V2 x y) = V2 (fromIntegral x) (fromIntegral y)
@@ -67,12 +66,9 @@ getXComp::V2 Int32->Int32
 getXComp (V2 x _) = x
 getYComp::V2 Int32->Int32
 getYComp (V2 _ y) = y
-
-findEnclosingRectangle:: IsPoint2 point2 Int32 => V.Vector (point2 Int32) -> RotatedRect
-findEnclosingRectangle = minAreaRect
     
 getUprightBoundRect::   V.Vector Point2i-> Rect2i 
-getUprightBoundRect contour= rotatedRectBoundingRect $ (findEnclosingRectangle contour)  --rect2i  
+getUprightBoundRect contour= rotatedRectBoundingRect $ (minAreaRect contour)  --rect2i  
 
 getContours :: PrimMonad m => Mat (S [h0, w0]) (S 1) (S Word8) -> m (V.Vector Contour)
 getContours image = do
@@ -125,29 +121,13 @@ isLong pts = (exceptError $ arcLength pts True)>=1500
 
 isImgFile::FilePath->Bool
 isImgFile nm = (reverse $ take 3 $ reverse nm) `elem` ["jpg","bmp","peg","png", "gif","tif","iff"]
-
-
-printSideLengths::((V.Vector Point2i),Double)->IO () --check that shortest side is at least half of second shortest side
-printSideLengths (v,area) = do
-    putStrLn $ "Area:                :\t"++show area
-    printSides v
     
-isSimplePolygon::V.Vector Point2i->Bool
-isSimplePolygon v = (fst $ shortestSides v)>=(0.5*(snd $ shortestSides v))  
-
-shortestSides::V.Vector Point2i->(Double,Double) --shortest, second shortest
-shortestSides v = (head lengths,head $ tail lengths)
-    where lengths = sort [    
-             exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 1)]) False  
-            ,exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 2)]) False
-            ,exceptError $ arcLength (V.fromList [(v V.! 3) , (v V.! 1)]) False
-            ,exceptError $ arcLength (V.fromList [(v V.! 3) , (v V.! 2)]) False    ]
-
-printSides::(V.Vector Point2i)->IO ()--
-printSides v = do
-        rs <-   V.sequence $ V.fromList [    
-             putStrLn $ show $ exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 1)]) False  
-            ,putStrLn $ show $ exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 2)]) False
-            ,putStrLn $ show $ exceptError $ arcLength (V.fromList [(v V.! 3) , (v V.! 1)]) False
-            ,putStrLn $ show $ exceptError $ arcLength (V.fromList [(v V.! 3) , (v V.! 2)]) False    ]
-        putStrLn $ show rs
+isSimplePolygon::V.Vector Point2i->Bool  --check that shortest side is at least half of second shortest side
+isSimplePolygon v = (sides !! 0)>=(0.5*(sides !! 1))  
+    where sides = (sort $ sideLengths v)
+          
+sideLengths::V.Vector Point2i->[CFloat]
+sideLengths v = [fromIntegral $ round $ exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 1)]) False  
+                ,fromIntegral $ round $ exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 2)]) False
+                ,fromIntegral $ round $ exceptError $ arcLength (V.fromList [(v V.! 3) , (v V.! 1)]) False
+                ,fromIntegral $ round $ exceptError $ arcLength (V.fromList [(v V.! 3) , (v V.! 2)]) False]

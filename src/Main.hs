@@ -3,6 +3,7 @@ module Main where
 import qualified Data.ByteString as B 
 import OpenCV
 import qualified Data.Vector as V
+import Control.Concurrent
 import Control.Monad (void,when)
 import Control.Monad.Primitive
 import Data.Function
@@ -41,34 +42,25 @@ main = do
         
 process::[FilePath]->IO ()
 process files = do   
-       -- imgColor <- imdecode ImreadUnchanged <$> B.readFile ("../data/"++ (head files))
-        --putStrLn $ "Reading "++ head files
         img <- imdecode ImreadGrayscale <$> B.readFile ("../data/"++ (head files))
         let formimg = exceptError $ coerceMat img :: Mat (S [ D, D]) (S 1) (S Word8)
         sharpImg <- (enhanceEdges $ gaussianBlurImg formimg 7) >>= (morphImg MorphOpen 1) >>= (morphImg MorphClose 1) --blur and sharpen formatted image
-        --let sharpImg = gaussianBlurImg formimg 7
         thickEdges <- morphImg MorphGradient 2 $ cannyImg sharpImg--do gradient detection (2 iterations)    
-        --let thickEdges = cannyImg sharpImg
+        
         --detect contours
         contours <- getContours thickEdges --get contours
         rawConts <- rawContours contours -- contours with children removed - flattened contour hierarchy  
         appConts <- approximateContours contours -- polygonal approximation of contours
         let quadrilaterals = V.filter isSimplePolygon $ V.filter isLong $ V.filter isQuad appConts -- large enough contours with four vertices - candidates for documents
-       -- let quadAreas = getAreas quadrilaterals
-       -- let allCands    = V.zip quadrilaterals quadAreas
-       -- putStrLn $ "\nAll candidates\n"++show allCands
-       -- rs <- V.sequence $ V.map printSideLengths allCands --sequence :: Monad m => Vector (m a) -> m (Vector a)
-       -- let viableCands = V.filter isSimplePolygon quadrilaterals
-       -- putStrLn $ "Better candidates\n"++show viableCands
-        
+             
         --putStrLn $ "Number of documents detected in image:"  ++head files++":  " ++ (show $ V.length quadrilaterals)
         
---         imgM     <- thaw imgColor
+--         imgM     <- thaw img
 --         drawContours (rawConts) red   (OutlineContour LineType_8 5) imgM --action to mutate imgMut  
 --         imgCont  <-freeze imgM
 --         showImage "Raw Contours" imgCont
 --        
---         imgMut   <- thaw imgColor  
+--         imgMut   <- thaw img  
 --         drawContours (quadrilaterals) red   (OutlineContour LineType_8 5) imgMut --action to mutate imgMut  
 --         imgContA <-freeze imgMut
 --         showImage "Approximated contours" imgContA 
@@ -77,11 +69,13 @@ process files = do
             then    process (tail files)
         else if     (V.length quadrilaterals >  0 && length files > 1) -- save objects and process next image if outlines and there are more images waiting 
             then do
-                    saveDetectedObjects (1) quadrilaterals img $ head files
+                    forkIO $ saveDetectedObjects (1) quadrilaterals img $ head files
                     process (tail files)
         else if     (V.length quadrilaterals > 0)                                                               
             then do
+                    --forkIO = do
                     saveDetectedObjects (1) quadrilaterals img $ head files
+                      --  threadDelay 40000
                     putStrLn "\nDONE!"
                     exitWith ExitSuccess                                      -- no more images remaining    
         else        exitWith ExitSuccess                                      --terminate if this was the last image
@@ -110,14 +104,9 @@ saveDetectedObjects::Int->(V.Vector (V.Vector Point2i))-> Mat (S [ D, D]) (D) (D
 saveDetectedObjects iter contours img fname
     | (V.null contours)   == True = putStrLn "NO OBJECTS DETECTED!"
     | otherwise                   = do
-        let contour = contours V.! 0
-        let a = orderPts contour
-        let dims = (fromSize  (rectSize (getUprightBoundRect $ contours V.! 0))::(V2 Int32))
-        let srcVec = V.fromList [getPt 1 a, getPt 2 a, getPt 3 a, getPt 4 a]
-        let dstVec = V.fromList [(V2 0 0),    (V2 (fromIntegral $ getXComp dims) 0),  (V2 0 (fromIntegral $ getYComp dims)) , (V2 (fromIntegral $ getXComp dims) (fromIntegral $ getYComp dims))]
-        let correctedImg = cropImg (perspectiveTransform img (getPerspectiveTransform (V.map (makePoint2f) srcVec) dstVec)) (V2 0 0) dims
-        --showImage "Corrected: " correctedImg
-        B.writeFile ("../data/Output/"++fnameNoExt++"_"++show iter++".tif") $ exceptError $ imencode OutputTiff  correctedImg
+        let correctedImg = correctImg (orderPts $ contours V.! 0) img
+        showImage "Corrected: " correctedImg
+        B.writeFile ("../data/Output/"++fnameNoExt++"_"++show iter++".tif") $ exceptError $ imencode OutputTiff correctedImg
         putStrLn $ "Wrote to file: ../data/Output/"++fnameNoExt++"_"++show iter++".tif" 
-        when (V.length contours > 1) $ saveDetectedObjects (iter+1) (V.tail contours)  img fname
+        when (V.length contours > 1) $ saveDetectedObjects (iter+1) (V.tail contours) img fname
     where fnameNoExt = reverse $ drop 4 $ reverse fname
