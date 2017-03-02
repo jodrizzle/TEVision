@@ -5,9 +5,6 @@ Version:1.0
 Date:01/03/2016
 
 Usage:
-<<<<<<< HEAD
-
-=======
  
 Using The Haskell Tool Stack:
  - Build:  stack build
@@ -27,10 +24,8 @@ Features:
 Notes:
  - image source files should be in the same directory as the executable
  - the output directory is /Output/
- 
->>>>>>> 878dff75465dbcc86ce7462401ca5fd6f37b2873
-TODO:
 
-performance tuning
-concurrency
-shrink images before processing for speedup
+TODO:
+ - performance tuning
+ - concurrency
+ - shrink images before processing for speedup
