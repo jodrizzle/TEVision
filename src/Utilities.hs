@@ -3,28 +3,19 @@ module Utilities (
    ,rawContours
    ,getContours
    ,getPt 
-   ,getUprightBoundRect
-   ,getXComp
-   ,getYComp
    ,sideLengths
    ,isLong
    ,isQuad
-   ,makePoint2f
+   ,cvtPointToCFloat
    ,orderPts
-   ,findLargestContourIndex
-   ,getAreas
-   ,contFloat
    ,isImgFile
    ,isSimplePolygon
-   ,transparent
-   ,white
-   ,black
-   ,blue
    ,green
    ,red
 )   where
 
-import Control.Monad (void)
+import qualified Data.Vector as V
+
 import Control.Monad.Primitive
 import Data.Function
 import Data.List
@@ -32,43 +23,31 @@ import Foreign.C.Types
 import GHC.Int (Int32)
 import GHC.Word 
 import Linear
-import System.Environment 
 import OpenCV
-import qualified Data.Vector as V
 
-transparent, white, black, blue, green, red   :: Scalar
-transparent = toScalar (V4 255 255 255   0 :: V4 Double)
-white       = toScalar (V4 255 255 255 255 :: V4 Double)
-black       = toScalar (V4   0   0   0 255 :: V4 Double)
-blue        = toScalar (V4 255   0   0 255 :: V4 Double)
+green, red   :: Scalar
 green       = toScalar (V4   0 255   0 255 :: V4 Double)
 red         = toScalar (V4   0   0 255 255 :: V4 Double)
 
+-- returns Vector : [TL,TR,BL,BR]
 orderPts::V.Vector Point2i->V.Vector Point2i
-orderPts pts = V.fromList [topLeft pts, topRight pts, bottomLeft pts, bottomRight pts]
+orderPts pts = V.fromList [getVertex take take pts, getVertex drop take pts, getVertex take drop pts, getVertex drop drop pts]
 
-topLeft::V.Vector Point2i->Point2i
-topLeft     = head . take 1 . sortBy (compare `on` (getXComp . fromPoint)) . take 2 . sortBy (compare `on` (getYComp . fromPoint)) . V.toList
-topRight::V.Vector Point2i->Point2i
-topRight    = head . drop 1 . sortBy (compare `on` (getXComp . fromPoint)) . take 2 . sortBy (compare `on` (getYComp . fromPoint)) . V.toList
-bottomLeft::V.Vector Point2i->Point2i
-bottomLeft  = head . take 1 . sortBy (compare `on` (getXComp . fromPoint)) . drop 2 . sortBy (compare `on` (getYComp . fromPoint)) . V.toList
-bottomRight::V.Vector Point2i->Point2i
-bottomRight = head . drop 1 . sortBy (compare `on` (getXComp . fromPoint)) . drop 2 . sortBy (compare `on` (getYComp . fromPoint)) . V.toList
+--use this to get a vertex in TL, TR, BL, BR
+--top: fn2 is 'take'; bottom: fn2 is 'drop'; right: fn1 is 'drop'; left: fn1 is 'take'  
+getVertex::(Int -> [Point2i] -> [Point2i])->(Int -> [Point2i] -> [Point2i])->V.Vector Point2i->Point2i 
+getVertex fn1 fn2 = head . fn1 1 . sortBy (compare `on` (getXComp . fromPoint)) . fn2 2 . sortBy (compare `on` (getYComp . fromPoint)) . V.toList
 
 getPt::Int->V.Vector Point2i->V2 Int32
 getPt num a = fromPoint $ a V.! num
 
-makePoint2f::V2 Int32->V2 CFloat
-makePoint2f (V2 x y) = V2 (fromIntegral x) (fromIntegral y)
+cvtPointToCFloat::V2 Int32->V2 CFloat
+cvtPointToCFloat (V2 x y) = V2 (fromIntegral x) (fromIntegral y)
 
 getXComp::V2 Int32->Int32
 getXComp (V2 x _) = x
 getYComp::V2 Int32->Int32
 getYComp (V2 _ y) = y
-    
-getUprightBoundRect::   V.Vector Point2i-> Rect2i 
-getUprightBoundRect contour= rotatedRectBoundingRect $ (minAreaRect contour)  --rect2i  
 
 getContours :: PrimMonad m => Mat (S [h0, w0]) (S 1) (S Word8) -> m (V.Vector Contour)
 getContours image = do
@@ -97,21 +76,7 @@ rawContours conts
             let cont = (contourPoints $ V.head conts)
             remainder <- pure (V.tail conts) >>= rawContours
             let conc = (V.singleton cont) V.++ remainder
-            return conc       
-          
-findLargestContourIndex::V.Vector Double->Int
-findLargestContourIndex areas 
-    | V.length areas == 0 = (-1)
-    | otherwise           = snd . maximum $ zip (V.toList areas) [0..]
-
-getAreas::V.Vector (V.Vector Point2i)->V.Vector Double
-getAreas conts
-    | V.length conts == 0 =  V.empty
-    | V.length conts == 1 =  V.singleton $ exceptError $ contourArea (contFloat (V.head conts)) ContourAreaAbsoluteValue
-    | otherwise           = (V.singleton (exceptError (contourArea (contFloat (V.head conts)) ContourAreaAbsoluteValue))) V.++ (getAreas (V.tail conts))
-
-contFloat::V.Vector Point2i -> V.Vector Point2f
-contFloat = V.map (toPoint . makePoint2f . fromPoint)                    
+            return conc             
   
 isQuad::V.Vector Point2i->Bool
 isQuad pts = (V.length pts == 4)
@@ -121,11 +86,11 @@ isLong pts = (exceptError $ arcLength pts True)>=1500
 
 isImgFile::FilePath->Bool
 isImgFile nm = (reverse $ take 3 $ reverse nm) `elem` ["jpg","bmp","peg","png", "gif","tif","iff"]
-    
+
 isSimplePolygon::V.Vector Point2i->Bool  --check that shortest side is at least half of second shortest side
 isSimplePolygon v = (sides !! 0)>=(0.5*(sides !! 1))  
     where sides = (sort $ sideLengths v)
-          
+
 sideLengths::V.Vector Point2i->[CFloat]
 sideLengths v = [fromIntegral $ round $ exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 1)]) False  
                 ,fromIntegral $ round $ exceptError $ arcLength (V.fromList [(v V.! 0) , (v V.! 2)]) False
