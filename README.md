@@ -8,22 +8,22 @@ Usage:
  
 Using The Haskell Tool Stack:
  - Build:  stack build
- - Run  :  stack exec TEVision                      (Process all image files in data/)
- - Run  :  stack exec TEVision imagepath.extension  (Process specified image file in data/)
+ - Run  :  stack exec TEVision                      (Process all image files)
+ - Run  :  stack exec TEVision imagepath.extension  (Process specified image file)
  
 Using binary:
  - Run  :  ./TEVision
  - Run  :  ./TEVision imagepath.extension 
  
 Features:
- - Cycles through image files in /data
+ - Cycles through image files in folder
  - Canny edge detection
  - Apply perspective transform to detected documents
  - Write output to files
  
 Notes:
- - image source files should be in the /data directory (data/ should be on the same level as src/).  Call the program from the    /src directory.
- - the output directory is /data/Output 
+ - image source files should be in the same directory as the executable
+ - the output directory is /Output/
  
 TODO:
  - performance tuning
