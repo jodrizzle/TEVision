@@ -22,9 +22,9 @@ main = do
                let fname = args !! 0 --file specified
                process [fname]
            else do                   --no file specified,do all
-                filePaths <- listDirectory "../data/"
+                filePaths <- listDirectory "."
                 let imgPaths = sort $ filter isImgFile filePaths --sort and filter - only image files  
-                createDirectoryIfMissing True "../data/Output"
+                createDirectoryIfMissing True "Output"
                 putStrLn $ "Image Files: \n"++show imgPaths++"\n"
                 if length imgPaths == 0
                     then exitWith ExitSuccess --no images found
@@ -32,7 +32,7 @@ main = do
 
 process::[FilePath]->IO ()
 process files = do           
-        img <- imdecode ImreadGrayscale <$> B.readFile ("../data/"++ (head files))
+        img <- imdecode ImreadGrayscale <$> B.readFile (head files)
         let formimg = exceptError $ coerceMat img :: Mat (S [ D, D]) (S 1) (S Word8)
         sharpImg <- (enhanceEdges $ gaussianBlurImg formimg 7) >>= (morphImg MorphOpen 1) >>= (morphImg MorphClose 1) -- blur and sharpen formatted image
         thickEdges <- morphImg MorphGradient 2 $ cannyImg sharpImg -- do gradient detection (2 iterations)    
@@ -64,7 +64,7 @@ saveDetectedObjects iter contours img fname
     | (V.null contours)   == True = putStrLn "NO OBJECTS DETECTED!"
     | otherwise                   = do
         let correctedImg = correctImg (orderPts $ contours V.! 0) img
-        B.writeFile ("../data/Output/"++fnameNoExt++"_"++show iter++".tif") $ exceptError $ imencode OutputTiff correctedImg
-        putStrLn $ "Wrote to file: ../data/Output/"++fnameNoExt++"_"++show iter++".tif" 
+        B.writeFile ("Output/"++fnameNoExt++"_"++show iter++".tif") $ exceptError $ imencode OutputTiff correctedImg
+        putStrLn $ "Wrote to file: Output/"++fnameNoExt++"_"++show iter++".tif" 
         when (V.length contours > 1) $ saveDetectedObjects (iter+1) (V.tail contours) img fname
     where fnameNoExt = reverse $ drop 4 $ reverse fname

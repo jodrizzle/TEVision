@@ -16,11 +16,11 @@ extra-source-files:  README.md
 executable TEVision
 
   hs-source-dirs:      src
-                     , data  
   main-is:             Main.hs
   
   default-language:    Haskell2010
   
+  ghc-options: 
   other-modules:       Filters
                      , Transforms   
                      , Utilities
