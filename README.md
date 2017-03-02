@@ -4,6 +4,8 @@ Version:1.0
 
 Date:01/03/2016
 
+IMPORTANT:  OpenCV needs to be installed on host system. See http://opencv.org/quickstart.html
+
 Usage:
  
 Using The Haskell Tool Stack:
