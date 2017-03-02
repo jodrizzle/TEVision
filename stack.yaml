@@ -1,7 +1,9 @@
 flags: {}
 extra-package-dbs: []
 packages:
-- ../my-haskell-opencv/haskell-opencv
+- location:
+    git: https://github.com/johanjvv089/haskell-opencv.git
+    commit: 20037890a1ced5e65b094b7e16d124fb2fa1fc16
 - '.'
 extra-deps: []
 resolver: lts-8.3

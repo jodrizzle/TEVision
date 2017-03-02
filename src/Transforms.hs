@@ -1,5 +1,6 @@
 module Transforms(
-     correctImg
+    correctImg
+   ,threshBinary
 ) where
 
 import qualified Data.Vector as V
