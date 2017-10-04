@@ -2,7 +2,8 @@ Author:Johan Jansen van Vuuren
 
 Version:1.0
 
-Date:01/03/2016
+Date:20/08/2017
+Revision: 05/10/2017
 
 IMPORTANT:  OpenCV needs to be installed on host system. See http://opencv.org/quickstart.html
 
